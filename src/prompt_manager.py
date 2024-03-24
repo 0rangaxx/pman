@@ -15,7 +15,7 @@ class PromptManager:
             else:
                 print("Registering prompt without image data")
                 # noimage.pngを読み込んでimage_dataに設定
-                noimage_path = os.path.join(os.path.dirname(__file__), 'noimage.png')
+                noimage_path = os.path.join(os.path.dirname(__file__), 'resources/images/noimage.png')
                 with open(noimage_path, 'rb') as file:
                     prompt['image_data'] = file.read()
             query = "INSERT INTO prompts (title, prompt, description, tags, image_data) VALUES (?, ?, ?, ?, ?)"
@@ -36,7 +36,7 @@ class PromptManager:
             else:
                 print("Editing prompt without image data")
                 # noimage.pngを読み込んでimage_dataに設定
-                noimage_path = os.path.join(os.path.dirname(__file__), 'noimage.png')
+                noimage_path = os.path.join(os.path.dirname(__file__), 'resources/images/noimage.png')
                 with open(noimage_path, 'rb') as file:
                     new_details['image_data'] = file.read()
             query = "UPDATE prompts SET title = ?, prompt = ?, description = ?, tags = ?, image_data = ? WHERE id = ?"

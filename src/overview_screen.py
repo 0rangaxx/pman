@@ -1,5 +1,6 @@
 ## overview_screen.py
 
+import random
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QLineEdit, QPushButton, QListWidget, QListWidgetItem, QMessageBox, QHBoxLayout, QLabel, QTextEdit, QApplication
 from PyQt5.QtGui import QPixmap, QIcon
@@ -36,7 +37,7 @@ class OverviewScreen(QMainWindow):
         #全体上部ウィジェット
         upperWidget = QWidget(centralWidget)  # 上部ウィジェットを作成
         upperLayout = QHBoxLayout(upperWidget)  # 上部レイアウトを作成
-        mainLayout.addWidget(upperWidget, stretch=3)  # メインレイアウトに上部ウィジェットを追加
+        mainLayout.addWidget(upperWidget, stretch=6)  # メインレイアウトに上部ウィジェットを追加
 
         # プロンプト一覧 (左側 3/2)
         leftWidget = QWidget(upperWidget)  # 左側のウィジェットを作成（upperWidgetを親に変更）
@@ -99,6 +100,10 @@ class OverviewScreen(QMainWindow):
         self.tagList.setWindowTitle('Tags')  # タグリストのウィンドウタイトルを設定
         r2Layout.addWidget(self.tagList)  # タグリスト用のレイアウトにタグリストを追加
         self.tagList.itemClicked.connect(self.onTagClicked)  # タグリストのアイテムクリックイベントを設定
+        # 「Add randomly from selected tag」ボタンを追加
+        self.addRandomlyButton = QPushButton("↓Add randomly from selected tag↓", r2Widget)
+        self.addRandomlyButton.clicked.connect(self.onAddRandomlyClicked)
+        r2Layout.addWidget(self.addRandomlyButton)
 
         self.updateTagList()  # タグリストを更新
 
@@ -134,6 +139,34 @@ class OverviewScreen(QMainWindow):
     def onTagClicked(self, item):
         tag = item.text()  # クリックされたタグのテキストを取得
         self.filterPrompts(tag=tag)  # タグでプロンプトをフィルタリング
+
+    def onAddRandomlyClicked(self):
+        # 1. 現在タグが選択状態かどうかを確認します
+        selected_tags = self.tagList.selectedItems()
+        if not selected_tags:
+            QMessageBox.warning(self, "Error", "No tag selected.")
+            return
+
+        # 2. 選択状態の場合、プロンプトリストの中からランダムで一つ選択する
+        prompt_items = [self.promptList.item(i) for i in range(self.promptList.count())]
+        if not prompt_items:
+            QMessageBox.warning(self, "Error", "No prompts available for the selected tag.")
+            return
+
+        random_item = random.choice(prompt_items)
+
+        # 3. 選択したプロンプトから内容を取得する
+        prompt_id = random_item.prompt_id
+        prompt_details = self.prompt_manager.get_prompt_details(prompt_id)
+        prompt_text = prompt_details.get('prompt', '')
+
+        # 4. promptEditBoxの末尾に半角スペースを挿入する
+        current_text = self.promptEditBox.toPlainText()
+        if not current_text.endswith(' '):
+            self.promptEditBox.insertPlainText(' ')
+
+        # 5. 取得したプロンプト内容のテキストを、promptEditBoxの末尾に挿入する
+        self.promptEditBox.insertPlainText(prompt_text)
 
     def refreshPrompts(self):
         self.searchField.clear()  # 検索フィールドをクリア
@@ -235,14 +268,6 @@ class OverviewScreen(QMainWindow):
                 label_width = self.thumbnailLabel.width()
                 label_height = self.thumbnailLabel.height()
 
-                # # アスペクト比を維持したままサムネイルのサイズを計算
-                # if aspect_ratio > label_width / label_height:
-                #     thumbnail_width = label_width
-                #     thumbnail_height = int(thumbnail_width / aspect_ratio)
-                # else:
-                #     thumbnail_height = label_height
-                #     thumbnail_width = int(thumbnail_height * aspect_ratio)
-
                 # サムネイルをリサイズ
                 pixmap_resized = pixmap.scaled(
                     label_width,
@@ -257,6 +282,7 @@ class OverviewScreen(QMainWindow):
         else:
             print("No image data to load thumbnail")
             self.thumbnailLabel.clear()
+
     def onCopyPromptClicked(self):
         # プロンプト作成欄の内容をクリップボードにコピー
         QApplication.clipboard().setText(self.promptEditBox.toPlainText())

@@ -1,8 +1,9 @@
 # pman
-![イメージ画像](src/resources/images/icon.png)
+
+<img alt="イメージビジュアル" src="src/resources/images/icon.png" width="30%">
+<img alt="スクリーンショット１" src="src/resources/images/screenshot01.png" width="750%">
 
 pmanは、主にStableDiffusionなどで使用されるプロンプトを管理するためのデスクトップアプリケーションです。プロンプトの作成、編集、検索、タグ付け、および画像の添付ができます。
-![スクリーンショット１](src/resources/images/screenshot01.png)
 
 ## 特徴
 

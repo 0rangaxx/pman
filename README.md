@@ -17,7 +17,7 @@ pmanは、主にStableDiffusionなどで使用されるプロンプトを管理�
 
 1. リポジトリをクローンします。
 ```bash
-git clone https://github.com/yourusername/ai-prompt-manager.git
+git clone https://github.com/0rangaxx/pman.git
 ```
 
 2. プロジェクトディレクトリに移動します。

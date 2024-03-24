@@ -65,4 +65,4 @@ startup.batをダブルクリックします
 
 ## ライセンス
 
-このプロジェクトは[MITライセンス](LICENSE)の下で公開されています。
+このプロジェクトは[GNU Affero General Public License v3.0](LICENSE)の下で公開されています。

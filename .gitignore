@@ -1,0 +1,5 @@
+venv
+prompts.db
+src/__pycache__
+src/resources/images/noimage.png
+

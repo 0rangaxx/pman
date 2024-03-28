@@ -47,6 +47,7 @@ class DetailScreen(QDialog):
         self.tagLabel = QLabel('Tags:', self)
         self.tagEdit = QListWidget(self)
         if 'tags' in self.prompt_details:
+            print(self.prompt_details['tags'])
             for tag in self.prompt_details['tags']:
                 self.tagEdit.addItem(tag)
 

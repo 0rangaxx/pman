@@ -219,16 +219,18 @@ class UIManager(QWidget):
     def fetch_file(self, file_name: str, directory_path: str, file_updated_at: float) -> bool:
         attributes = self.db_manager.retrieve_image_attributes_by_file_name(file_name, directory_path)
         if attributes is None:
-            print(f"更新が必要なファイル: {file_name}")
+            print(f"新しいファイルが見つかりました: {file_name}")
             return True
         else:
             db_updated_at = datetime.fromisoformat(attributes['updated_at'])
             file_updated_at = datetime.fromtimestamp(file_updated_at)
             if db_updated_at < file_updated_at:
-                print(f"更新が必要なファイル: {file_name}")
+                print(f"ファイルが更新されています: {file_name}")
+                print(f"データベースの更新日時: {db_updated_at}")
+                print(f"ファイルの更新日時: {file_updated_at}")
                 return True
             else:
-                print(f"更新が不要なファイル: {file_name}")
+                print(f"ファイルは最新の状態です: {file_name}") 
                 return False
 
     def record_file_process(self, file_name: str, directory_path: str):
@@ -267,14 +269,9 @@ class UIManager(QWidget):
         thumbnail_width = self.thumbnail_widget.thumbnail_size.width()
         num_columns = max(1, scroll_area_width // thumbnail_width)
 
-        # Calculate the visible range of thumbnails
-        scroll_bar = self.scroll_area.verticalScrollBar()
-        start_index = scroll_bar.value() // self.thumbnail_widget.thumbnail_size.height() * num_columns
-        end_index = start_index + (self.scroll_area.viewport().height() // self.thumbnail_widget.thumbnail_size.height() + 1) * num_columns
 
         row, col = 0, 0
-        for index in range(start_index, min(end_index, len(self.iFiles))):
-            file_path, _ = self.iFiles[index]
+        for file_path, _ in self.iFiles:
             file_name = os.path.basename(file_path)
             directory_path = os.path.dirname(file_path)
             attributes = self.db_manager.retrieve_image_attributes_by_file_name(file_name, directory_path)

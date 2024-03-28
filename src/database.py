@@ -73,15 +73,15 @@ class DatabaseManager:
                 description = image_attributes.get('description', '')
 
                 cursor.execute('''
-                    INSERT INTO image_attributes (
+                    INSERT OR REPLACE INTO image_attributes (
                         directory_path, file_name, extension, nsfw_flag, fav_flag, trash_flag,
-                        rating, software, prompt, negative_prompt, description, thumbnail
+                        rating, software, prompt, negative_prompt, description, thumbnail, updated_at
                     )
                     VALUES (
                         :directory_path, :file_name, :extension, :nsfw_flag, :fav_flag, :trash_flag,
-                        :rating, :software, :prompt, :negative_prompt, :description, :thumbnail
+                        :rating, :software, :prompt, :negative_prompt, :description, :thumbnail, :updated_at
                     )
-                ''', {**image_attributes, 'nsfw_flag': nsfw_flag, 'fav_flag': fav_flag, 'trash_flag': trash_flag, 'rating': rating, 'software': software, 'prompt': prompt, 'negative_prompt': negative_prompt, 'description': description})
+                ''', {**image_attributes, 'nsfw_flag': nsfw_flag, 'fav_flag': fav_flag, 'trash_flag': trash_flag, 'rating': rating, 'software': software, 'prompt': prompt, 'negative_prompt': negative_prompt, 'description': description, 'updated_at': datetime.now()})
                 lastrowid = cursor.lastrowid
         except sqlite3.Error as e:
             print(f"画像の属性の挿入中にエラーが発生しました: {e}")
@@ -177,7 +177,7 @@ class DatabaseManager:
         try:
             with self._connect() as conn:
                 cursor = conn.cursor()
-                print(f"ファイル名: {file_name}, ディレクトリパス: {directory_path}の画像の属性を取得しています")
+                print(f"ファイル名: {file_name} の画像の属性を取得しています")
                 cursor.execute('''
                     SELECT *
                     FROM image_attributes
@@ -204,7 +204,7 @@ class DatabaseManager:
                     }
                     # print(f"取得した画像の属性: {attributes}")
                     return attributes
-                print(f"ファイル名: {file_name}, ディレクトリパス: {directory_path}の画像が見つかりませんでした")
+                print(f"ファイル名: {file_name} の画像が見つかりませんでした")
                 return None
         except sqlite3.Error as e:
             print(f"画像の属性の取得中にエラーが発生しました: {e}")

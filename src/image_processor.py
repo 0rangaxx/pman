@@ -32,7 +32,6 @@ class ImageProcessor:
             raise FileNotFoundError(f"指定された画像パスが存在しません: {image_path}")
 
         try:
-            print(f"画像を開いています: {image_path}")
             with Image.open(image_path) as img:
                 if size is None:
                     size = self.thumbnail_size

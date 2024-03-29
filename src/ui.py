@@ -4,6 +4,7 @@ from PyQt5.QtCore import Qt, pyqtSignal, QSize
 from PyQt5.QtGui import QPixmap, QKeySequence, QIcon
 import sys
 import os
+import configparser
 from typing import List, Tuple
 from database import DatabaseManager
 from image_processor import ImageProcessor
@@ -18,9 +19,12 @@ class UIManager(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Image Viewer")
         self.db_manager = DatabaseManager()
         self.image_processor = ImageProcessor()
+        self.directory_edit = QLineEdit()  # 追加: directory_editを初期化
+        self.config_file = 'config.ini'
+        self.config = configparser.ConfigParser()
+        self.setWindowTitle("Image Viewer")
         self.tag_list = []
         self.searching_tags = []
         self.update_target_list = []
@@ -33,9 +37,21 @@ class UIManager(QWidget):
         self.thumbnail_widget = ThumbnailWidget(self.scroll_area, self)
         self.scroll_area.setWidget(self.thumbnail_widget)
 
+        # 設定ファイルが存在する場合は読み込む
+        if os.path.exists(self.config_file):
+            self.config.read(self.config_file)
+
+        # 設定ファイルに`opendirectory`の値が存在する場合は、その値を使用してディレクトリを開く
+        if self.config.has_option('DEFAULT', 'opendirectory'):
+            directory = self.config.get('DEFAULT', 'opendirectory')
+        if os.path.exists(directory):
+            # self.open_directory(directory)
+            self.on_directory_button_clicked(directory)  # 追加: on_directory_button_clickedメソッドを呼び出す
+
+
 
     def setup_connections(self):
-        self.directory_button.clicked.connect(self.on_directory_button_clicked)
+        pass
 
     def create_central_widget(self):
         central_widget = QWidget()
@@ -104,7 +120,6 @@ class UIManager(QWidget):
         directory_layout = QHBoxLayout()
         self.update_button = QPushButton("更新")
         self.directory_button = QPushButton("ディレクトリ選択")
-        self.directory_edit = QLineEdit()
         self.directory_edit.setReadOnly(True)
         directory_layout.addWidget(self.update_button)
         directory_layout.addWidget(self.directory_button)
@@ -172,12 +187,22 @@ class UIManager(QWidget):
         # 選択された画像をゴミ箱に移動する処理を実装
         pass
 
-    def on_directory_button_clicked(self):
-        # ユーザデータからディレクトリを選択する
-        selected_directory = QFileDialog.getExistingDirectory(self, "Select Directory")
+    def on_directory_button_clicked(self, directory=None):
+        if directory is None:
+            # ユーザデータからディレクトリを選択する
+            selected_directory = QFileDialog.getExistingDirectory(self, "Select Directory")
+        else:
+            selected_directory = directory
+
         if selected_directory:
-            self.directory_edit.setText(selected_directory)
+            if hasattr(self, 'directory_edit'):  # 追加: directory_editの存在チェック
+                self.directory_edit.setText(selected_directory)
             print(f"選択されたディレクトリ: {selected_directory}")
+
+            # 選択されたディレクトリを設定ファイルに保存
+            self.config.set('DEFAULT', 'opendirectory', selected_directory)
+            with open(self.config_file, 'w') as file:
+                self.config.write(file)
 
             # 変数の初期化
             self.tag_list = []
@@ -252,23 +277,13 @@ class UIManager(QWidget):
         })
         print(f"ファイルをデータベースに記録: {file_name}")
 
-
-    def resizeEvent(self, event):
-        super().resizeEvent(event)
-        self.display_thumbnails()
-
     def display_thumbnails(self):
-        # Clear existing thumbnails
-        while self.thumbnail_widget.layout().count():
-            child = self.thumbnail_widget.layout().takeAt(0)
-            if child.widget():
-                child.widget().deleteLater()
+        self.thumbnail_widget.clear_thumbnails()  # サムネイル画像のみをクリアする
 
         # Calculate the number of columns based on the scroll area width and thumbnail size
         scroll_area_width = self.scroll_area.viewport().width()
         thumbnail_width = self.thumbnail_widget.thumbnail_size.width()
         num_columns = max(1, scroll_area_width // thumbnail_width)
-
 
         row, col = 0, 0
         for file_path, _ in self.iFiles:
@@ -296,10 +311,20 @@ class ThumbnailWidget(QWidget):
         super().__init__(parent)
         self.ui_manager = ui_manager
         self.setLayout(QGridLayout())
-        self.thumbnail_size = QSize(256, 256)
+        self.layout().setHorizontalSpacing(1)  # 横幅スペーシングを5に設定
+        self.layout().setVerticalSpacing(1)    # 縦幅スペーシングを5に設定
+        self.thumbnail_size = QSize(300, 300)
+
+    def clear_thumbnails(self):
+        while self.layout().count():
+            item = self.layout().takeAt(0)
+            widget = item.widget()
+            if widget:
+                widget.deleteLater()
 
     def wheelEvent(self, event):
         if event.modifiers() & Qt.ControlModifier:
+            self.clear_thumbnails()
             delta = event.angleDelta().y()
             if delta > 0:
                 self.thumbnail_size *= 1.1
@@ -307,8 +332,7 @@ class ThumbnailWidget(QWidget):
                 self.thumbnail_size /= 1.1
             self.thumbnail_size = self.thumbnail_size.expandedTo(QSize(64, 64))
             self.thumbnail_size = self.thumbnail_size.boundedTo(QSize(1024, 1024))
-            # self.parent().parent().display_thumbnails_signal.emit()  # シグナルを発行
-            self.ui_manager.display_thumbnails_slot()
+            self.ui_manager.display_thumbnails()
             event.accept()
         else:
             super().wheelEvent(event)

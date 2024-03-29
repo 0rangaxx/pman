@@ -18,8 +18,12 @@ class MainWindow(QMainWindow):
         self.image_processor = ImageProcessor()
         self.tag_manager = TagManager()
         self.setup_connections()
+        self.ui_manager.directory_button.clicked.connect(self.on_directory_button_clicked)
         print("MainWindowが初期化されました")
 
+    def on_directory_button_clicked(self):
+        self.ui_manager.on_directory_button_clicked()
+        
     def setup_connections(self):
         # UIシグナルとスロットの接続
         self.ui_manager.thumbnail_display_requested.connect(self.update_thumbnail_display)

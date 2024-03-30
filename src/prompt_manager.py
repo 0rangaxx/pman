@@ -2,7 +2,7 @@
 from typing import List, Dict
 import sqlite3
 import os
-from database_manager import DatabaseManager
+from managers.database_manager import DatabaseManager
 
 class PromptManager:
     def __init__(self, database_path: str = "prompts.db"):
@@ -85,7 +85,7 @@ class PromptManager:
     def get_prompts(self) -> List[Dict]:
         try:
             query = "SELECT id, title, prompt, description, tags, image_data FROM prompts"
-            prompts = self.database_manager.fetch_all(query)
+            prompts = self.database_manager.fetch_all_prompts(query)
             return [{"id": prompt[0], "title": prompt[1], "prompt": prompt[2], "description": prompt[3], "tags": prompt[4].split(",") if prompt[4] else [], "image_data": prompt[5]} for prompt in prompts]
         except sqlite3.Error as e:
             print(f"Database error while retrieving prompts: {e}")

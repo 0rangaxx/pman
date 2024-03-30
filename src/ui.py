@@ -27,6 +27,7 @@ class UIManager(QWidget):
         self.directory_edit = QLineEdit()  # 追加: directory_editを初期化
         self.config_file = 'config.ini'
         self.config = configparser.ConfigParser()
+        self.directory = None  # directoryを初期化
         self.delimiter = ','  # delimiterの初期値をカンマに設定
         self.setWindowTitle("Image Viewer")
         self.tag_list = []
@@ -45,18 +46,18 @@ class UIManager(QWidget):
         if os.path.exists(self.config_file):
             self.config.read(self.config_file)
 
-        # 設定ファイルに`opendirectory`の値が存在する場合は、その値を使用してディレクトリを開く
-        if self.config.has_option('DEFAULT', 'opendirectory'):
-            directory = self.config.get('DEFAULT', 'opendirectory')
-        if os.path.exists(directory):
-            # self.open_directory(directory)
-            self.on_directory_button_clicked(directory)  # 追加: on_directory_button_clickedメソッドを呼び出す
-
         # 設定ファイルに`delimiter`の値が存在する場合は、その値を使用する
         if self.config.has_option('DEFAULT', 'delimiter'):
             self.delimiter = self.config.get('DEFAULT', 'delimiter')
         else:
             self.delimiter = ','  # デフォルト値はカンマ
+            
+        # 設定ファイルに`opendirectory`の値が存在する場合は、その値を使用してディレクトリを開く
+        if self.config.has_option('DEFAULT', 'opendirectory'):
+            self.directory = self.config.get('DEFAULT', 'opendirectory')
+        if os.path.exists(self.directory):
+            self.on_directory_button_clicked(self.directory)  # 追加: on_directory_button_clickedメソッドを呼び出す
+
 
 
     def setup_connections(self):

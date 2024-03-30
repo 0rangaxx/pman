@@ -26,7 +26,7 @@ class OverviewScreen(QMainWindow):
         self.initUI()
 
     def initUI(self):
-        self.setWindowTitle('Prompt Overview')  # ウィンドウタイトルを設定
+        self.setWindowTitle('pman - prompt manager')  # ウィンドウタイトルを設定
         self.setGeometry(100, 100, 1280, 720)  # ウィンドウの位置とサイズを設定
 
         centralWidget = QWidget(self)  # 中央ウィジェットを作成
@@ -73,9 +73,13 @@ class OverviewScreen(QMainWindow):
         self.newPromptButton.clicked.connect(self.onNewPromptClicked)  # 新規プロンプトボタンのクリックイベントを設定
         promptButtonLayout.addWidget(self.newPromptButton)  # プロンプトボタンレイアウトに新規プロンプトボタンを追加
 
-        self.deletePromptButton = QPushButton("Delete Selected Prompt", centralWidget)  # 選択プロンプト削除ボタンを作成
+        self.deletePromptButton = QPushButton("Delete Prompt", centralWidget)  # 選択プロンプト削除ボタンを作成
         self.deletePromptButton.clicked.connect(self.onDeletePromptClicked)  # 選択プロンプト削除ボタンのクリックイベントを設定
         promptButtonLayout.addWidget(self.deletePromptButton)  # プロンプトボタンレイアウトに選択プロンプト削除ボタンを追加
+
+        self.addPromptButton = QPushButton("↓Add Prompt↓", centralWidget)  # 選択プロンプト削除ボタンを作成
+        self.addPromptButton.clicked.connect(self.onAddPromptClicked)  # 選択プロンプト削除ボタンのクリックイベントを設定
+        promptButtonLayout.addWidget(self.addPromptButton)  # プロンプトボタンレイアウトに選択プロンプト削除ボタンを追加
 
         leftLayout.addLayout(promptButtonLayout)  # 左側のレイアウトにプロンプトボタンレイアウトを追加
 
@@ -204,6 +208,24 @@ class OverviewScreen(QMainWindow):
                    QMessageBox.warning(self, "Error", "Failed to delete the prompt.")  # 削除失敗のメッセージを表示
         else:
             QMessageBox.warning(self, "Error", "No prompt selected.")  # プロンプトが選択されていない場合のメッセージを表示
+
+    def onAddPromptClicked(self):
+        selected_item = self.promptList.currentItem()  # 選択されているアイテムを取得
+        if isinstance(selected_item, CustomQListWidgetItem):
+            prompt_id = selected_item.prompt_id  # プロンプトIDを取得
+        else:
+            QMessageBox.warning(self, "Error", "No prompt selected.")  # プロンプトが選択されていない場合のメッセージを表示
+            return
+        # 3. 選択したプロンプトから内容を取得する
+        prompt_details = self.prompt_manager.get_prompt_details(prompt_id)
+        prompt_text = prompt_details.get('prompt', '')
+        # promptEditBoxの末尾に半角スペースを挿入する
+        current_text = self.promptEditBox.toPlainText()
+        if not current_text.endswith(' '):
+            self.promptEditBox.insertPlainText(' ')
+
+        # 取得したプロンプト内容のテキストを、promptEditBoxの末尾に挿入する
+        self.promptEditBox.insertPlainText(prompt_text)
 
     def onSearchClicked(self):
         keyword = self.searchField.text()  # 検索フィールドのテキストを取得

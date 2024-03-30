@@ -4,6 +4,7 @@
 <img alt="スクリーンショット１" src="src/resources/images/screenshot01.png" width="750%">
 
 pmanは、主にStableDiffusionなどで使用されるプロンプトを管理するためのデスクトップアプリケーションです。プロンプトの作成、編集、検索、タグ付け、および画像の添付ができます。
+webuiのwildcardsとは別の管理方法が欲しくなったため作成しました。
 
 ## 特徴
 

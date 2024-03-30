@@ -1,0 +1,5 @@
+venv
+prompts.db
+images.db
+src/__pycache__
+config.ini

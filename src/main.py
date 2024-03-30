@@ -1,8 +1,8 @@
 ## main.py
-import sys
+import sys, os
 from PyQt5.QtWidgets import QApplication, QMainWindow
-from ui import UIManager
-from database import DatabaseManager
+from managers.ui_manager import UIManager
+from managers.database_manager import DatabaseManager
 from image_processor import ImageProcessor
 from tag_manager import TagManager
 
@@ -18,16 +18,21 @@ class MainWindow(QMainWindow):
         self.image_processor = ImageProcessor()
         self.tag_manager = TagManager()
         self.setup_connections()
-        self.ui_manager.directory_button.clicked.connect(self.on_directory_button_clicked)
         print("MainWindowが初期化されました")
 
-    def on_directory_button_clicked(self):
-        self.ui_manager.on_directory_button_clicked()
+    # def on_directory_selected(self, directory):
         
     def setup_connections(self):
         # UIシグナルとスロットの接続
-        self.ui_manager.thumbnail_display_requested.connect(self.update_thumbnail_display)
-        self.ui_manager.tag_list_update_requested.connect(self.update_tag_list)
+        self.ui_manager.thumbnail_display_requested.connect(self.ui_manager.display_thumbnails)
+        self.ui_manager.left_panel.current_tags_updated.connect(self.ui_manager.left_panel.update_current_tags)
+
+        # 設定ファイルにdirectoryの設定がある場合、そのディレクトリを読み込む
+        directory = self.ui_manager.config_manager.get_directory()
+        if directory and os.path.exists(directory):
+            self.ui_manager.on_directory_button_clicked(directory)
+        else:
+            self.ui_manager.on_directory_button_clicked(None)
         print("UIシグナルがスロットに接続されました")
 
     def create_menu_bar(self):
@@ -41,36 +46,6 @@ class MainWindow(QMainWindow):
         self.db_manager.connect()
         super().show()
         print("データベースに接続し、MainWindowが表示されました")
-
-    def update_thumbnail_display(self):
-        # データベースから画像パスを取得
-        image_paths = self.db_manager.fetch_image_paths()
-        print(f"データベースから{len(image_paths)}個の画像パスを取得しました")
-
-        # 各画像のサムネイルを生成
-        thumbnails = [self.image_processor.generate_thumbnail(path) for path in image_paths]
-        print(f"{len(thumbnails)}個のサムネイルを生成しました")
-
-        # UIにサムネイルを更新
-        self.ui_manager.update_thumbnail_display(thumbnails)
-        print("サムネイル表示が更新されました")
-
-    def update_tag_list(self):
-        # データベースから画像パスを取得
-        image_paths = self.db_manager.fetch_image_paths()
-        print(f"データベースから{len(image_paths)}個の画像パスを取得しました")
-
-        # 各画像のタグを抽出
-        tags = [self.tag_manager.extract_tags(path) for path in image_paths]
-        print(f"{len(tags)}個の画像からタグを抽出しました")
-
-        # タグのリストをフラット化し、重複を削除
-        unique_tags = list(set([tag for sublist in tags for tag in sublist]))
-        print(f"{len(unique_tags)}個のユニークなタグが見つかりました")
-
-        # UIにユニークなタグを更新
-        self.ui_manager.update_tag_list(unique_tags)
-        print("タグリストが更新されました")
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

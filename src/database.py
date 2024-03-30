@@ -177,7 +177,6 @@ class DatabaseManager:
         try:
             with self._connect() as conn:
                 cursor = conn.cursor()
-                print(f"ファイル名: {file_name} の画像の属性を取得しています")
                 cursor.execute('''
                     SELECT *
                     FROM image_attributes

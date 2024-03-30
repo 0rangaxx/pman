@@ -2,7 +2,10 @@
 from PyQt5.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QApplication, QComboBox, QPushButton, QCheckBox, QLineEdit, QListWidget, QFileDialog, QMenu, QAction, QListWidgetItem, QScrollArea, QGridLayout
 from PyQt5.QtCore import Qt, pyqtSignal, QSize
 from PyQt5.QtGui import QPixmap, QKeySequence, QIcon
+from collections import Counter
+import re
 import sys
+import json
 import os
 import configparser
 from typing import List, Tuple
@@ -24,6 +27,7 @@ class UIManager(QWidget):
         self.directory_edit = QLineEdit()  # 追加: directory_editを初期化
         self.config_file = 'config.ini'
         self.config = configparser.ConfigParser()
+        self.delimiter = ','  # delimiterの初期値をカンマに設定
         self.setWindowTitle("Image Viewer")
         self.tag_list = []
         self.searching_tags = []
@@ -48,6 +52,11 @@ class UIManager(QWidget):
             # self.open_directory(directory)
             self.on_directory_button_clicked(directory)  # 追加: on_directory_button_clickedメソッドを呼び出す
 
+        # 設定ファイルに`delimiter`の値が存在する場合は、その値を使用する
+        if self.config.has_option('DEFAULT', 'delimiter'):
+            self.delimiter = self.config.get('DEFAULT', 'delimiter')
+        else:
+            self.delimiter = ','  # デフォルト値はカンマ
 
 
     def setup_connections(self):
@@ -129,8 +138,6 @@ class UIManager(QWidget):
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
         self.thumbnail_grid = QWidget()
-        # self.thumbnail_layout = QGridLayout()
-        # self.thumbnail_grid.setLayout(self.thumbnail_layout)
         self.scroll_area.setWidget(self.thumbnail_grid)
         right_layout.addWidget(self.scroll_area)
 
@@ -258,8 +265,81 @@ class UIManager(QWidget):
                 print(f"ファイルは最新の状態です: {file_name}") 
                 return False
 
+    def extract_metadata(self, image_path):
+        if not os.path.isfile(image_path):
+            print(f"Error: File not found - {image_path}")
+            return None
+
+        _, ext = os.path.splitext(image_path)
+        if ext.lower() not in ['.png', '.jpg', '.jpeg']:
+            print(f"Error: Unsupported file format - {ext}")
+            return None
+
+        metaChunk = None
+
+        with open(image_path, "rb") as bin:
+            if ext.lower() == '.png':
+                # PNGファイルの場合
+                bin.seek(8)  # シグネチャを読み飛ばす
+                while True:
+                    data_len_b = bin.read(4)
+                    if not data_len_b:
+                        break
+                    data_len = int.from_bytes(data_len_b, "big")
+                    chunk_type_b = bin.read(4)
+                    chunk_type = chunk_type_b.decode()
+
+                    if chunk_type == "tEXt":
+                        data_b = bin.read(data_len)
+                        data = data_b.decode()
+                        keyword, text = data.split("\0", 1)
+                        if keyword == "Software" and text == "NovelAI":
+                            metaChunk = "NovelAI"
+                        elif keyword == "Comment" and metaChunk == "NovelAI":
+                            metaChunk = text
+                            break
+                    else:
+                        bin.seek(data_len, 1)
+                    
+                    bin.seek(4, 1)  # CRCを読み飛ばす
+
+            else:
+                # JPEGファイルの場合（実装は省略）
+                pass
+        if metaChunk is None:
+            print(f"No metadata found")
+            return None
+        image_attribute = self.extract_naidata(metaChunk)
+        return image_attribute
+
+    def extract_naidata(self,metadata_text):
+        try:
+            softwear = 'NovelAI'
+            metadata = json.loads(metadata_text)
+            
+            prompt = metadata.get("prompt", "")
+            negative_prompt = metadata.get("uc", "")
+            
+            description = f"steps: {metadata.get('steps', '')}, height: {metadata.get('height', '')}, width: {metadata.get('width', '')}, scale: {metadata.get('scale', '')}, seed: {metadata.get('seed', '')}, sampler: {metadata.get('sampler', '')}"
+            
+            return softwear, prompt, negative_prompt, description
+        
+        except json.JSONDecodeError:
+            print("Error: Invalid JSON format")
+            return "", "", "", ""
+        
     def record_file_process(self, file_name: str, directory_path: str):
         file_path = os.path.join(directory_path, file_name)
+        metadata=self.extract_metadata(file_path)
+
+        if metadata is not None:
+            print('metadata ok')
+            softwear, prompt, negative_prompt, description = metadata
+        else:
+            print('metadata none')
+            softwear, prompt, negative_prompt, description = "", "", "", ""
+        
+        
         # 元画像の解像度を取得
         with Image.open(file_path) as img:
             original_size = img.size
@@ -273,18 +353,23 @@ class UIManager(QWidget):
             'directory_path': directory_path,
             'file_name': file_name,
             'extension': extension,
-            'thumbnail': thumbnail_data
+            'thumbnail': thumbnail_data,
+            'softwear': softwear,
+            'prompt': prompt,
+            'negative_prompt': negative_prompt,
+            'description': description
         })
         print(f"ファイルをデータベースに記録: {file_name}")
 
     def display_thumbnails(self):
         self.thumbnail_widget.clear_thumbnails()  # サムネイル画像のみをクリアする
-
+        print(f"サムネイルを表示")
         # Calculate the number of columns based on the scroll area width and thumbnail size
         scroll_area_width = self.scroll_area.viewport().width()
         thumbnail_width = self.thumbnail_widget.thumbnail_size.width()
         num_columns = max(1, scroll_area_width // thumbnail_width)
 
+        displayTags = []  # 変数displayTagsを初期化
         row, col = 0, 0
         for file_path, _ in self.iFiles:
             file_name = os.path.basename(file_path)
@@ -304,7 +389,29 @@ class UIManager(QWidget):
                 if col >= num_columns:
                     col = 0
                     row += 1
-                print(f"サムネイルを表示: {file_name}")
+            
+                # サムネイルと紐づいたpromptの値から{}・[]を除外してdisplayTagsに追加
+                prompt = attributes['prompt']
+                prompt = re.sub(r'[\{\}\[\]]', '', prompt)
+                displayTags.append(prompt)
+    
+        # displayTagsをself.delimiterで分割して単語リストを作成
+        word_list = []
+        for tags in displayTags:
+            words = tags.split(self.delimiter)
+            words = [word.strip() for word in words if word.strip()]  # 空文字列でない単語のみを含める
+            word_list.extend(words)
+        
+        # 単語の出現回数をカウント
+        word_counts = Counter(word_list)
+
+        # 単語と出現回数を組み合わせた文字列のリストを作成
+        word_list_with_counts = [f"{word} ({count})" for word, count in word_counts.items()]
+        # 単語をアルファベット順に並べ替え
+        sorted_word_list_with_counts = sorted(word_list_with_counts)
+        # current_tag_listを更新
+        self.current_tag_list.clear()
+        self.current_tag_list.addItems(sorted_word_list_with_counts)
 
 class ThumbnailWidget(QWidget):
     def __init__(self, parent=None, ui_manager=None):

@@ -3,6 +3,7 @@ from PyQt5.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLab
 from PyQt5.QtCore import Qt, pyqtSignal, QSize
 from PyQt5.QtGui import QPixmap, QKeySequence, QIcon
 import sys
+import json
 import os
 import configparser
 from typing import List, Tuple
@@ -258,8 +259,81 @@ class UIManager(QWidget):
                 print(f"ファイルは最新の状態です: {file_name}") 
                 return False
 
+    def extract_metadata(self, image_path):
+        if not os.path.isfile(image_path):
+            print(f"Error: File not found - {image_path}")
+            return None
+
+        _, ext = os.path.splitext(image_path)
+        if ext.lower() not in ['.png', '.jpg', '.jpeg']:
+            print(f"Error: Unsupported file format - {ext}")
+            return None
+
+        metaChunk = None
+
+        with open(image_path, "rb") as bin:
+            if ext.lower() == '.png':
+                # PNGファイルの場合
+                bin.seek(8)  # シグネチャを読み飛ばす
+                while True:
+                    data_len_b = bin.read(4)
+                    if not data_len_b:
+                        break
+                    data_len = int.from_bytes(data_len_b, "big")
+                    chunk_type_b = bin.read(4)
+                    chunk_type = chunk_type_b.decode()
+
+                    if chunk_type == "tEXt":
+                        data_b = bin.read(data_len)
+                        data = data_b.decode()
+                        keyword, text = data.split("\0", 1)
+                        if keyword == "Software" and text == "NovelAI":
+                            metaChunk = "NovelAI"
+                        elif keyword == "Comment" and metaChunk == "NovelAI":
+                            metaChunk = text
+                            break
+                    else:
+                        bin.seek(data_len, 1)
+                    
+                    bin.seek(4, 1)  # CRCを読み飛ばす
+
+            else:
+                # JPEGファイルの場合（実装は省略）
+                pass
+        if metaChunk is None:
+            print(f"No metadata found for file: {image_path}")
+            return            
+        image_attribute = self.extract_naidata(metaChunk)
+        return image_attribute
+
+    def extract_naidata(self,metadata_text):
+        try:
+            softwear = 'NovelAI'
+            metadata = json.loads(metadata_text)
+            
+            prompt = metadata.get("prompt", "")
+            negative_prompt = metadata.get("uc", "")
+            
+            description = f"steps: {metadata.get('steps', '')}, height: {metadata.get('height', '')}, width: {metadata.get('width', '')}, scale: {metadata.get('scale', '')}, seed: {metadata.get('seed', '')}, sampler: {metadata.get('sampler', '')}"
+            
+            return softwear, prompt, negative_prompt, description
+        
+        except json.JSONDecodeError:
+            print("Error: Invalid JSON format")
+            return "", "", "", ""
+        
     def record_file_process(self, file_name: str, directory_path: str):
         file_path = os.path.join(directory_path, file_name)
+        metadata=self.extract_metadata(file_path)
+
+        if metadata is not None:
+            print('metadata ok')
+            softwear, prompt, negative_prompt, description = metadata
+        else:
+            print('metadata none')
+            softwear, prompt, negative_prompt, description = "", "", "", ""
+        
+        
         # 元画像の解像度を取得
         with Image.open(file_path) as img:
             original_size = img.size
@@ -273,13 +347,17 @@ class UIManager(QWidget):
             'directory_path': directory_path,
             'file_name': file_name,
             'extension': extension,
-            'thumbnail': thumbnail_data
+            'thumbnail': thumbnail_data,
+            'softwear': softwear,
+            'prompt': prompt,
+            'negative_prompt': negative_prompt,
+            'description': description
         })
         print(f"ファイルをデータベースに記録: {file_name}")
 
     def display_thumbnails(self):
         self.thumbnail_widget.clear_thumbnails()  # サムネイル画像のみをクリアする
-
+        print(f"サムネイルを表示")
         # Calculate the number of columns based on the scroll area width and thumbnail size
         scroll_area_width = self.scroll_area.viewport().width()
         thumbnail_width = self.thumbnail_widget.thumbnail_size.width()
@@ -304,7 +382,6 @@ class UIManager(QWidget):
                 if col >= num_columns:
                     col = 0
                     row += 1
-                print(f"サムネイルを表示: {file_name}")
 
 class ThumbnailWidget(QWidget):
     def __init__(self, parent=None, ui_manager=None):

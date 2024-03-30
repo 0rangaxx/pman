@@ -1,11 +1,17 @@
-## database.py
-import sqlite3
-from typing import Dict, Optional, List
+# database_manager.py
+
+import sqlite3, os
+from typing import Dict, Optional, List, Union
 from datetime import datetime
 
 class DatabaseManager:
-    def __init__(self, db_path: str = 'images.db'):
+    def __init__(self, db_path: str = 'images_and_prompts.db'):
         self.db_path = db_path
+        self.connection = None
+        self.connect()
+        # データベースファイルが存在しない場合のみテーブルを作成
+        if not os.path.exists(self.db_path):
+            self._create_tables()
 
     def _connect(self):
         """コンテキストマネージャーを使用してデータベース接続を作成し、リトライロジックを適用します。"""
@@ -16,12 +22,22 @@ class DatabaseManager:
                 print(f"データベース接続に失敗しました: {e}、リトライしています...")
         raise sqlite3.Error("複数回の試行後もデータベースに接続できませんでした。")
 
-    def _create_tables(self) -> None:
-        """存在しない場合は、必要なテーブルを作成します。安全なリソース管理のためにコンテキストマネージャーを使用します。"""
+    def connect(self) -> None:
+        """SQLiteデータベースへの接続を確立します。"""
         try:
-            with self._connect() as conn:
-                cursor = conn.cursor()
-                print("テーブルを作成しています...")
+            self.connection = self._connect()
+            print("データベースへの接続が正常に確立されました。")
+        except sqlite3.Error as e:
+            print(f"データベースへの接続中にエラーが発生しました: {e}")
+            raise e
+
+    def _create_tables(self) -> None:
+        """存在しない場合は、必要なテーブルを作成します。"""
+        try:
+            with self.connection:
+                cursor = self.connection.cursor()
+                
+                # image_attributesテーブルの作成
                 cursor.execute('''
                     CREATE TABLE IF NOT EXISTS image_attributes (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -41,21 +57,40 @@ class DatabaseManager:
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     )
                 ''')
+                
+                # promptsテーブルの作成
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS prompts (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        title TEXT NOT NULL,
+                        prompt TEXT NOT NULL,
+                        description TEXT,
+                        tags TEXT,
+                        image_data BLOB
+                    )
+                ''')
+                
                 print("テーブルが正常に作成されました。")
         except sqlite3.Error as e:
             print(f"テーブルの作成中にエラーが発生しました: {e}")
             raise e
 
-    def connect(self) -> None:
-        """SQLiteデータベースへの接続を確立し、テーブルを作成します。"""
+    def execute_query(self, query: str, params: tuple = (), commit: bool = True):
+        """SQLクエリを実行します。"""
         try:
-            with self._connect() as conn:
-                print("データベースに接続しています...")
-                self._create_tables()
-                print("データベースへの接続が正常に確立されました。")
+            with self.connection:
+                cursor = self.connection.cursor()
+                cursor.execute(query, params)
+                if commit:
+                    self.connection.commit()
+                if query.strip().upper().startswith("SELECT"):
+                    return cursor.fetchall()
+                else:
+                    return cursor.lastrowid
         except sqlite3.Error as e:
-            print(f"データベースへの接続中にエラーが発生しました: {e}")
+            print(f"クエリの実行中にエラーが発生しました: {e}")
             raise e
+
         
     def insert_image_attributes(self, image_attributes: Dict[str, str]) -> Optional[int]:
         try:
@@ -250,3 +285,91 @@ class DatabaseManager:
         except sqlite3.Error as e:
             print(f"画像の一覧表示中にエラーが発生しました: {e}")
         return images
+    
+    def insert_prompt(self, title: str, prompt: str, description: str = "", tags: str = "", image_data: bytes = None) -> Optional[int]:
+        """promptsテーブルに新しいプロンプトを挿入します。"""
+        try:
+            with self._connect() as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    INSERT INTO prompts (title, prompt, description, tags, image_data)
+                    VALUES (?, ?, ?, ?, ?)
+                ''', (title, prompt, description, tags, image_data))
+                return cursor.lastrowid
+        except sqlite3.Error as e:
+            print(f"プロンプトの挿入中にエラーが発生しました: {e}")
+            return None
+
+    def update_prompt(self, prompt_id: int, title: str = None, prompt: str = None, description: str = None, tags: str = None, image_data: bytes = None) -> bool:
+        """promptsテーブルの既存のプロンプトを更新します。"""
+        try:
+            with self._connect() as conn:
+                cursor = conn.cursor()
+                update_fields = []
+                params = []
+
+                if title is not None:
+                    update_fields.append("title = ?")
+                    params.append(title)
+                if prompt is not None:
+                    update_fields.append("prompt = ?")
+                    params.append(prompt)
+                if description is not None:
+                    update_fields.append("description = ?")
+                    params.append(description)
+                if tags is not None:
+                    update_fields.append("tags = ?")
+                    params.append(tags)
+                if image_data is not None:
+                    update_fields.append("image_data = ?")
+                    params.append(image_data)
+
+                if update_fields:
+                    query = f"UPDATE prompts SET {', '.join(update_fields)} WHERE id = ?"
+                    params.append(prompt_id)
+                    cursor.execute(query, tuple(params))
+                    return True
+                else:
+                    print("更新するフィールドが指定されていません")
+                    return False
+        except sqlite3.Error as e:
+            print(f"プロンプトの更新中にエラーが発生しました: {e}")
+            return False
+
+    def delete_prompt(self, prompt_id: int) -> bool:
+        """promptsテーブルから指定されたプロンプトを削除します。"""
+        try:
+            with self._connect() as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    DELETE FROM prompts
+                    WHERE id = ?
+                ''', (prompt_id,))
+                return True
+        except sqlite3.Error as e:
+            print(f"プロンプトの削除中にエラーが発生しました: {e}")
+            return False
+
+    def fetch_all_prompts(self) -> List[tuple]:
+        """promptsテーブルからすべてのプロンプトを取得します。"""
+        return self.execute_query("SELECT * FROM prompts")
+
+    def fetch_prompt(self, prompt_id: int) -> Union[tuple, None]:
+        """promptsテーブルから指定されたIDのプロンプトを取得します。"""
+        result = self.execute_query("SELECT * FROM prompts WHERE id = ?", (prompt_id,))
+        if result:
+            return result[0]
+        else:
+            return None
+
+
+
+    def close_connection(self) -> None:
+        """データベース接続を明示的に閉じます。"""
+        if self.connection:
+            self.connection.close()
+            print("データベース接続が閉じられました。")
+
+    def __del__(self):
+        """DatabaseManagerが破棄されるときに、データベース接続が閉じられるようにします。"""
+        self.close_connection()

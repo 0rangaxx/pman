@@ -2,6 +2,7 @@
 from PyQt5.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QApplication, QComboBox, QPushButton, QCheckBox, QLineEdit, QListWidget, QFileDialog, QMenu, QAction, QListWidgetItem, QScrollArea, QGridLayout
 from PyQt5.QtCore import Qt, pyqtSignal, QSize
 from PyQt5.QtGui import QPixmap, QKeySequence, QIcon
+import re
 import sys
 import json
 import os
@@ -49,6 +50,11 @@ class UIManager(QWidget):
             # self.open_directory(directory)
             self.on_directory_button_clicked(directory)  # 追加: on_directory_button_clickedメソッドを呼び出す
 
+        # 設定ファイルに`delimiter`の値が存在する場合は、その値を使用する
+        if self.config.has_option('DEFAULT', 'delimiter'):
+            self.delimiter = self.config.get('DEFAULT', 'delimiter')
+        else:
+            self.delimiter = ','  # デフォルト値はカンマ
 
 
     def setup_connections(self):
@@ -130,8 +136,6 @@ class UIManager(QWidget):
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
         self.thumbnail_grid = QWidget()
-        # self.thumbnail_layout = QGridLayout()
-        # self.thumbnail_grid.setLayout(self.thumbnail_layout)
         self.scroll_area.setWidget(self.thumbnail_grid)
         right_layout.addWidget(self.scroll_area)
 
@@ -301,8 +305,8 @@ class UIManager(QWidget):
                 # JPEGファイルの場合（実装は省略）
                 pass
         if metaChunk is None:
-            print(f"No metadata found for file: {image_path}")
-            return            
+            print(f"No metadata found")
+            return None
         image_attribute = self.extract_naidata(metaChunk)
         return image_attribute
 
@@ -363,6 +367,7 @@ class UIManager(QWidget):
         thumbnail_width = self.thumbnail_widget.thumbnail_size.width()
         num_columns = max(1, scroll_area_width // thumbnail_width)
 
+        displayTags = []  # 変数displayTagsを初期化
         row, col = 0, 0
         for file_path, _ in self.iFiles:
             file_name = os.path.basename(file_path)
@@ -382,6 +387,15 @@ class UIManager(QWidget):
                 if col >= num_columns:
                     col = 0
                     row += 1
+            
+                # サムネイルと紐づいたpromptの値から{}・[]を除外してdisplayTagsに追加
+                prompt = attributes['prompt']
+                prompt = re.sub(r'[\{\}\[\]]', '', prompt)
+                displayTags.append(prompt)
+    
+        # ループ終了時に変数displayTagsの内容をprint
+        print("Display Tags:")
+        print(displayTags)
 
 class ThumbnailWidget(QWidget):
     def __init__(self, parent=None, ui_manager=None):

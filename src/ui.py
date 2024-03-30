@@ -2,6 +2,7 @@
 from PyQt5.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QApplication, QComboBox, QPushButton, QCheckBox, QLineEdit, QListWidget, QFileDialog, QMenu, QAction, QListWidgetItem, QScrollArea, QGridLayout
 from PyQt5.QtCore import Qt, pyqtSignal, QSize
 from PyQt5.QtGui import QPixmap, QKeySequence, QIcon
+from collections import Counter
 import re
 import sys
 import json
@@ -26,6 +27,7 @@ class UIManager(QWidget):
         self.directory_edit = QLineEdit()  # 追加: directory_editを初期化
         self.config_file = 'config.ini'
         self.config = configparser.ConfigParser()
+        self.delimiter = ','  # delimiterの初期値をカンマに設定
         self.setWindowTitle("Image Viewer")
         self.tag_list = []
         self.searching_tags = []
@@ -393,9 +395,23 @@ class UIManager(QWidget):
                 prompt = re.sub(r'[\{\}\[\]]', '', prompt)
                 displayTags.append(prompt)
     
-        # ループ終了時に変数displayTagsの内容をprint
-        print("Display Tags:")
-        print(displayTags)
+        # displayTagsをself.delimiterで分割して単語リストを作成
+        word_list = []
+        for tags in displayTags:
+            words = tags.split(self.delimiter)
+            words = [word.strip() for word in words if word.strip()]  # 空文字列でない単語のみを含める
+            word_list.extend(words)
+        
+        # 単語の出現回数をカウント
+        word_counts = Counter(word_list)
+
+        # 単語と出現回数を組み合わせた文字列のリストを作成
+        word_list_with_counts = [f"{word} ({count})" for word, count in word_counts.items()]
+        # 単語をアルファベット順に並べ替え
+        sorted_word_list_with_counts = sorted(word_list_with_counts)
+        # current_tag_listを更新
+        self.current_tag_list.clear()
+        self.current_tag_list.addItems(sorted_word_list_with_counts)
 
 class ThumbnailWidget(QWidget):
     def __init__(self, parent=None, ui_manager=None):

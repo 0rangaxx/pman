@@ -1,10 +1,14 @@
 from PyQt5.QtWidgets import QMenu, QAction
 from PyQt5.QtGui import QKeySequence
 from PyQt5.QtCore import Qt
+from managers.database_manager import DatabaseManager
+from interface.thumbnail_widget import ThumbnailWidget
 
 class ContextMenu(QMenu):
-    def __init__(self, parent=None):
+    def __init__(self, thumbnail_widget, parent=None):
         super().__init__(parent)
+        self.db_manager = DatabaseManager()
+        self.thumbnail_widget = thumbnail_widget
         self.init_actions()
         self.connect_actions()
 
@@ -27,22 +31,12 @@ class ContextMenu(QMenu):
 
     def connect_actions(self):
         self.open_action.triggered.connect(self.open_selected_images)
-        self.fav_action.triggered.connect(self.toggle_fav_selected_images)
-        self.nsfw_action.triggered.connect(self.toggle_nsfw_selected_images)
-        self.trash_action.triggered.connect(self.trash_selected_images)
+        # self.fav_action.triggered.connect(self.toggle_fav_selected_images)
+        self.fav_action.triggered.connect(self.thumbnail_widget.toggle_fav_selected_images)
+        self.nsfw_action.triggered.connect(self.thumbnail_widget.toggle_nsfw_selected_images)
+        # self.nsfw_action.triggered.connect(self.toggle_nsfw_selected_images)
+        self.trash_action.triggered.connect(self.thumbnail_widget.toggle_trash_selected_images)
 
     def open_selected_images(self):
         # 選択された画像を開く処理を実装
-        pass
-
-    def toggle_fav_selected_images(self):
-        # 選択された画像のお気に入りを切り替える処理を実装
-        pass
-
-    def toggle_nsfw_selected_images(self):
-        # 選択された画像のNSFWを切り替える処理を実装
-        pass
-
-    def trash_selected_images(self):
-        # 選択された画像をゴミ箱に移動する処理を実装
         pass

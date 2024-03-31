@@ -9,9 +9,7 @@ class DatabaseManager:
         self.db_path = db_path
         self.connection = None
         self.connect()
-        # データベースファイルが存在しない場合のみテーブルを作成
-        if not os.path.exists(self.db_path):
-            self._create_tables()
+        self._create_tables_if_not_exists()  # テーブルが存在しない場合のみ作成する
 
     def _connect(self):
         """コンテキストマネージャーを使用してデータベース接続を作成し、リトライロジックを適用します。"""
@@ -31,44 +29,51 @@ class DatabaseManager:
             print(f"データベースへの接続中にエラーが発生しました: {e}")
             raise e
 
-    def _create_tables(self) -> None:
-        """存在しない場合は、必要なテーブルを作成します。"""
+    def _create_tables_if_not_exists(self) -> None:
+        """テーブルが存在しない場合は、必要なテーブルを作成します。"""
         try:
             with self.connection:
                 cursor = self.connection.cursor()
                 
-                # image_attributesテーブルの作成
-                cursor.execute('''
-                    CREATE TABLE IF NOT EXISTS image_attributes (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        directory_path TEXT NOT NULL,
-                        file_name TEXT NOT NULL,
-                        extension TEXT NOT NULL,
-                        nsfw_flag INTEGER DEFAULT 0,
-                        fav_flag INTEGER DEFAULT 0,
-                        trash_flag INTEGER DEFAULT 0,
-                        rating INTEGER DEFAULT 0,
-                        software TEXT,
-                        prompt TEXT,
-                        negative_prompt TEXT,
-                        description TEXT,
-                        thumbnail BLOB,
-                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                    )
-                ''')
+                # image_attributesテーブルの存在を確認
+                cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='image_attributes'")
+                if cursor.fetchone() is None:
+                    # image_attributesテーブルが存在しない場合は作成
+                    cursor.execute('''
+                        CREATE TABLE IF NOT EXISTS image_attributes (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            directory_path TEXT NOT NULL,
+                            file_name TEXT NOT NULL,
+                            extension TEXT NOT NULL,
+                            nsfw_flag INTEGER DEFAULT 0,
+                            fav_flag INTEGER DEFAULT 0,
+                            trash_flag INTEGER DEFAULT 0,
+                            rating INTEGER DEFAULT 0,
+                            software TEXT,
+                            prompt TEXT,
+                            negative_prompt TEXT,
+                            description TEXT,
+                            thumbnail BLOB,
+                            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                            )
+                    ''')
                 
-                # promptsテーブルの作成
-                cursor.execute('''
-                    CREATE TABLE IF NOT EXISTS prompts (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        title TEXT NOT NULL,
-                        prompt TEXT NOT NULL,
-                        description TEXT,
-                        tags TEXT,
-                        image_data BLOB
-                    )
-                ''')
+            
+                # promptsテーブルの存在を確認
+                cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='prompts'")
+                if cursor.fetchone() is None:
+                    # promptsテーブルが存在しない場合は作成
+                    cursor.execute('''
+                        CREATE TABLE IF NOT EXISTS prompts (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            title TEXT NOT NULL,
+                            prompt TEXT NOT NULL,
+                            description TEXT,
+                            tags TEXT,
+                            image_data BLOB
+                        )
+                    ''')
                 
                 print("テーブルが正常に作成されました。")
         except sqlite3.Error as e:
@@ -207,29 +212,37 @@ class DatabaseManager:
             print(f"画像の属性の取得中にエラーが発生しました: {e}")
             return None
 
-    def retrieve_image_attributes_by_file_name(self, file_name: str, directory_path: str, search_tags: List[str] = None) -> Optional[Dict[str, str]]:
+    def retrieve_image_attributes_by_file_name(self, file_name: str, directory_path: str, search_tags: List[str] = None, fav_flag: int = None, nsfw_flag: int = 0, trash_flag: int = 0) -> Optional[Dict[str, str]]:
         """ファイル名とディレクトリパスに基づいて画像の属性を取得します。"""
         try:
             with self._connect() as conn:
                 cursor = conn.cursor()
                 
+                conditions = ["file_name = ?", "directory_path = ?"]
+                params = [file_name, directory_path]
+
                 if search_tags:
-                    # 動的にLIKE条件を生成
                     like_conditions = " AND ".join(["prompt LIKE ?" for _ in search_tags])
-                    query = f'''
-                        SELECT *
-                        FROM image_attributes
-                        WHERE file_name = ? AND directory_path = ? AND {like_conditions}
-                    '''
-                    # タプルにファイル名、ディレクトリパス、検索タグを順に追加
-                    params = (file_name, directory_path, *[f'%{tag}%' for tag in search_tags])
-                else:
-                    query = '''
-                        SELECT *
-                        FROM image_attributes
-                        WHERE file_name = ? AND directory_path = ?
-                    '''
-                    params = (file_name, directory_path)
+                    conditions.append(like_conditions)
+                    params.extend([f'%{tag}%' for tag in search_tags])
+
+                if fav_flag is not None:
+                    conditions.append("fav_flag = ?")
+                    params.append(fav_flag)
+
+                if nsfw_flag is not None:
+                    conditions.append(f"nsfw_flag = ?")
+                    params.append(nsfw_flag)
+
+                if trash_flag is not None:
+                    conditions.append(f"trash_flag = ?")
+                    params.append(trash_flag)
+
+                query = f'''
+                    SELECT *
+                    FROM image_attributes
+                    WHERE {" AND ".join(conditions)}
+                '''
 
                 cursor.execute(query, params)
                 result = cursor.fetchone()
@@ -251,7 +264,7 @@ class DatabaseManager:
                         "updated_at": result[13],
                         "created_at": result[14]
                     }
-                    # print(f"取得した画像の属性: {attributes}")
+                    # print(f"nsfw:{attributes['nsfw_flag']} ,trash:{attributes['trash_flag']} ,  ")
                     return attributes
                 print(f"ファイル名: {file_name} の画像が見つかりませんでした")
                 return None

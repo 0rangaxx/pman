@@ -1,6 +1,7 @@
 ## left_panel.py
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QPushButton, QCheckBox, QLineEdit, QListWidget
-from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QPushButton, QCheckBox, QLineEdit, QListWidget, QCompleter
+from PyQt5 import QtCore
+from PyQt5.QtCore import pyqtSignal, QStringListModel
 from collections import Counter
 
 class LeftPanel(QWidget):
@@ -12,6 +13,8 @@ class LeftPanel(QWidget):
         self.delimiter = delimiter  # delimiterをインスタンス変数に設定
         self.setup_ui()
         self.setup_connections()
+        self.searching_tags = []
+        self.setup_search_completer()
 
     def setup_ui(self):
         main_layout = QVBoxLayout(self)
@@ -59,13 +62,34 @@ class LeftPanel(QWidget):
         self.search_button.clicked.connect(self.update_search_tags)
         self.clear_button.clicked.connect(self.clear_search_tags)
 
+    def setup_search_completer(self):
+        completer = QCompleter(self)
+        completer.setCaseSensitivity(QtCore.Qt.CaseInsensitive)
+        completer.setCompletionMode(QCompleter.PopupCompletion)
+        self.search_edit.setCompleter(completer)
+
+        def update_completer_model():
+            word_list = [item.text().split(' (')[0] for item in self.current_tag_list.findItems("*", QtCore.Qt.MatchWildcard)]
+            model = QStringListModel(word_list, completer)
+            completer.setModel(model)
+
+        self.current_tag_list.model().rowsInserted.connect(lambda: update_completer_model())
+        self.current_tag_list.model().rowsRemoved.connect(lambda: update_completer_model())
+        update_completer_model()
+
     def update_search_tags(self):
         search_text = self.search_edit.text()
-        search_tags = search_text.split(',')
-        self.search_tags_updated.emit(search_tags)
+        if search_text:
+            search_tags = search_text.split(',')
+            self.searching_tags.extend(search_tags)
+            self.search_tag_list.clear()
+            self.search_tag_list.addItems(self.searching_tags)
+            self.search_tags_updated.emit(self.searching_tags)
 
     def clear_search_tags(self):
         self.search_edit.clear()
+        self.searching_tags = []
+        self.search_tag_list.clear()
         self.search_tags_updated.emit([])
 
 

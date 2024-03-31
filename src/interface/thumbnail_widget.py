@@ -13,6 +13,7 @@ class ThumbnailWidget(QWidget):
         super().__init__(parent)
         self.original_images = {}  # オリジナルの画像データを保持する辞書
         self.selected_thumbnails = set()  # 選択されたサムネイルを管理するセット
+        self.setFocusPolicy(Qt.StrongFocus)  # フォーカスを受け取れるようにする
         self.init_ui()
 
     def init_ui(self):
@@ -36,48 +37,69 @@ class ThumbnailWidget(QWidget):
         self.original_images[(row, col)] = image_data  # オリジナルの画像データを保持
         label.mousePressEvent = lambda event, r=row, c=col: self.mousePressEvent(event, r, c)  # マウスイベントを修正
 
+    def keyPressEvent(self, event):
+        if event.modifiers() & Qt.ControlModifier and event.key() == Qt.Key_A:
+            self.select_all_thumbnails()
+        else:
+            super().keyPressEvent(event)
+
+    def select_all_thumbnails(self):
+        self.selected_thumbnails.clear()
+        for i in range(self.grid_layout.rowCount()):
+            for j in range(self.grid_layout.columnCount()):
+                self.selected_thumbnails.add((i, j))
+                self.highlight_thumbnail(i, j, False)
     
     def mousePressEvent(self, event, row, col):
         modifiers = event.modifiers()  # 修飾キーの状態を取得
         if event.button() == Qt.RightButton:
-            if (row, col) not in self.selected_thumbnails:
-                if not self.selected_thumbnails:
-                    self.selected_thumbnails.clear()  # 選択状態が空の場合のみクリア
+            if len(self.selected_thumbnails) <= 1:
+                self.selected_thumbnails.clear()  # 選択状態をクリア
                 self.selected_thumbnails.add((row, col))  # 新しく選択状態を追加
-            self.highlight_thumbnail(row, col, modifiers & Qt.ControlModifier)
+            self.highlight_thumbnail(row, col)
             self.thumbnail_right_clicked.emit(event, row, col)  # 右クリック時にシグナルを発信し、イベント、行、列を含める
         else:
-            # 以下は変更なし
             if modifiers & Qt.ControlModifier:  # Ctrlキーが押されている場合
                 if (row, col) in self.selected_thumbnails:
                     self.selected_thumbnails.remove((row, col))  # 選択状態を解除
+                    self.unhighlight_thumbnail(row, col)
                 else:
                     self.selected_thumbnails.add((row, col))  # 選択状態を追加
+                    self.highlight_thumbnail(row, col)
+            elif modifiers & Qt.ShiftModifier:  # Shiftキーが押されている場合
+                # 範囲選択の処理を追加
+                if self.selected_thumbnails:
+                    start_row, start_col = min(self.selected_thumbnails)
+                    self.selected_thumbnails.clear()
+                    for i in range(min(start_row, row), max(start_row, row) + 1):
+                        for j in range(self.grid_layout.columnCount()):
+                            if (min(start_col, col) <= j <= max(start_col, col)):
+                                self.selected_thumbnails.add((i, j))
+                                self.highlight_thumbnail(i, j)
+                else:
+                    self.selected_thumbnails.add((row, col))
+                    self.highlight_thumbnail(row, col)
             else:
                 self.selected_thumbnails.clear()  # 選択状態をクリア
+                for i in range(self.grid_layout.rowCount()):
+                    for j in range(self.grid_layout.columnCount()):
+                        self.unhighlight_thumbnail(i, j)
                 self.selected_thumbnails.add((row, col))  # 新しく選択状態を追加
+                self.highlight_thumbnail(row, col)
         self.thumbnail_clicked.emit(row, col, modifiers & Qt.ControlModifier)  # 選択状態を通知
 
 
-    def highlight_thumbnail(self, row, col, ctrl_pressed):
+    def highlight_thumbnail(self, row, col):
         item = self.grid_layout.itemAtPosition(row, col)
         if item:
             label = item.widget()
-            if (row, col) in self.selected_thumbnails:
-                label.setStyleSheet("background-color: rgba(0, 0, 255, 0.3);")  # 選択状態のハイライトを設定
-                # label.setStyleSheet("border: 2px solid red;")  # 選択状態のハイライトを設定
-            else:
-                label.setStyleSheet("background-color: none;")  # 選択状態を解除
-                # label.setStyleSheet("border: none;")  # 選択状態を解除
+            label.setStyleSheet("background-color: rgba(0, 0, 255, 0.3);")  # 選択状態のハイライトを設定
 
-        if not ctrl_pressed:
-            for i in range(self.grid_layout.rowCount()):
-                for j in range(self.grid_layout.columnCount()):
-                    if (i, j) != (row, col):
-                        item = self.grid_layout.itemAtPosition(i, j)
-                        if item:
-                            label = item.widget()
-                            label.setStyleSheet("background-color: none;")  # 他の選択状態を解除
+    def unhighlight_thumbnail(self, row, col):
+        item = self.grid_layout.itemAtPosition(row, col)
+        if item:
+            label = item.widget()
+            label.setStyleSheet("background-color: none;")  # 選択状態を解除
 
     def clear_thumbnails(self):
         # すべてのサムネイル画像を削除します

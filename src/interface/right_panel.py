@@ -63,7 +63,7 @@ class RightPanel(QWidget):
         self.thumbnail_widget.update_thumbnail_size(size)
 
     def show_context_menu(self, event, row, col):
-        context_menu = ContextMenu(self)
+        context_menu = ContextMenu(self.thumbnail_widget)
         thumbnail_pos = self.thumbnail_widget.grid_layout.itemAtPosition(row, col).geometry().topLeft()
         global_pos = self.thumbnail_widget.mapToGlobal(thumbnail_pos) + event.pos()
         modifiers = event.modifiers()  # 修飾キーの状態を取得

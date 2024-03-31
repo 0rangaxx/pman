@@ -207,29 +207,29 @@ class DatabaseManager:
             print(f"画像の属性の取得中にエラーが発生しました: {e}")
             return None
 
-    def retrieve_image_attributes_by_file_name(self, file_name: str, directory_path: str, search_tags: List[str] = None) -> Optional[Dict[str, str]]:
+    def retrieve_image_attributes_by_file_name(self, file_name: str, directory_path: str, search_tags: List[str] = None, fav_flag: int = None) -> Optional[Dict[str, str]]:
         """ファイル名とディレクトリパスに基づいて画像の属性を取得します。"""
         try:
             with self._connect() as conn:
                 cursor = conn.cursor()
                 
+                conditions = ["file_name = ?", "directory_path = ?"]
+                params = [file_name, directory_path]
+
                 if search_tags:
-                    # 動的にLIKE条件を生成
                     like_conditions = " AND ".join(["prompt LIKE ?" for _ in search_tags])
-                    query = f'''
-                        SELECT *
-                        FROM image_attributes
-                        WHERE file_name = ? AND directory_path = ? AND {like_conditions}
-                    '''
-                    # タプルにファイル名、ディレクトリパス、検索タグを順に追加
-                    params = (file_name, directory_path, *[f'%{tag}%' for tag in search_tags])
-                else:
-                    query = '''
-                        SELECT *
-                        FROM image_attributes
-                        WHERE file_name = ? AND directory_path = ?
-                    '''
-                    params = (file_name, directory_path)
+                    conditions.append(like_conditions)
+                    params.extend([f'%{tag}%' for tag in search_tags])
+
+                if fav_flag is not None:
+                    conditions.append("fav_flag = ?")
+                    params.append(fav_flag)
+
+                query = f'''
+                    SELECT *
+                    FROM image_attributes
+                    WHERE {" AND ".join(conditions)}
+                '''
 
                 cursor.execute(query, params)
                 result = cursor.fetchone()
@@ -251,7 +251,6 @@ class DatabaseManager:
                         "updated_at": result[13],
                         "created_at": result[14]
                     }
-                    # print(f"取得した画像の属性: {attributes}")
                     return attributes
                 print(f"ファイル名: {file_name} の画像が見つかりませんでした")
                 return None

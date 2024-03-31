@@ -1,6 +1,7 @@
 from PyQt5.QtWidgets import QWidget, QGridLayout, QLabel
 from PyQt5.QtCore import Qt, QSize, pyqtSignal, QEvent
 from PyQt5.QtGui import QPixmap, QImage
+from managers.database_manager import DatabaseManager
 
 
 # ThumbnailWidgetクラスはサムネイル画像を表示するためのウィジェットです
@@ -11,6 +12,7 @@ class ThumbnailWidget(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.db_manager = DatabaseManager()
         self.original_images = {}  # オリジナルの画像データを保持する辞書
         self.selected_thumbnails = set()  # 選択されたサムネイルを管理するセット
         self.selected_ids = []  # 選択中IDリストを追加
@@ -41,6 +43,9 @@ class ThumbnailWidget(QWidget):
     def keyPressEvent(self, event):
         if event.modifiers() & Qt.ControlModifier and event.key() == Qt.Key_A:
             self.select_all_thumbnails()
+        elif event.key() == Qt.Key_F:
+            # fキーだけが押されたときの処理をここに記述
+            self.toggle_fav_selected_images()
         else:
             super().keyPressEvent(event)
 
@@ -49,7 +54,7 @@ class ThumbnailWidget(QWidget):
         for i in range(self.grid_layout.rowCount()):
             for j in range(self.grid_layout.columnCount()):
                 self.selected_thumbnails.add((i, j))
-                self.highlight_thumbnail(i, j, False)
+                self.highlight_thumbnail(i, j)  # 引数を3つに変更
     
     def mousePressEvent(self, event, row, col):
         modifiers = event.modifiers()  # 修飾キーの状態を取得
@@ -154,3 +159,18 @@ class ThumbnailWidget(QWidget):
             event.accept()
         else:
             super().wheelEvent(event)
+
+    def toggle_fav_selected_images(self):
+        selected_ids = []
+        for pos in self.selected_thumbnails:
+            if pos in self.original_images:
+                _, image_id = self.original_images[pos]
+                selected_ids.append(image_id)
+            else:
+                print(f"Warning: Position {pos} not found in original_images")
+
+        for image_id in selected_ids:
+            attributes = self.db_manager.retrieve_image_attributes(image_id)
+            if attributes:
+                attributes['fav_flag'] = 1 - attributes['fav_flag']
+                self.db_manager.update_image_attributes(image_id, attributes)

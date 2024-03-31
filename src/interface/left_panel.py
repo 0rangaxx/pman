@@ -7,6 +7,9 @@ from collections import Counter
 class LeftPanel(QWidget):
     search_tags_updated = pyqtSignal(list)
     current_tags_updated = pyqtSignal(list)
+    fav_flag_changed = pyqtSignal(bool)
+    nsfw_flag_changed = pyqtSignal(bool)
+    trash_flag_changed = pyqtSignal(bool)
 
     def __init__(self, parent=None, delimiter=','):  # delimiterを引数で受け取る
         super().__init__(parent)
@@ -64,7 +67,19 @@ class LeftPanel(QWidget):
         self.search_edit.returnPressed.connect(self.update_search_tags) 
         self.current_tag_list.itemDoubleClicked.connect(self.on_current_tag_double_clicked)
         self.search_tag_list.itemDoubleClicked.connect(self.on_search_tag_double_clicked)
+        self.fav_check.stateChanged.connect(self.on_fav_flag_changed)
+        self.nsfw_check.stateChanged.connect(self.on_nsfw_flag_changed)
+        self.trash_check.stateChanged.connect(self.on_trash_flag_changed)
 
+    def on_fav_flag_changed(self, state):
+        self.fav_flag_changed.emit(state == QtCore.Qt.Checked)
+
+    def on_nsfw_flag_changed(self, state):
+        self.nsfw_flag_changed.emit(state == QtCore.Qt.Checked)
+        
+    def on_trash_flag_changed(self, state):
+        self.trash_flag_changed.emit(state == QtCore.Qt.Checked)
+        
     def setup_search_completer(self):
         completer = QCompleter(self)
         completer.setCaseSensitivity(QtCore.Qt.CaseInsensitive)

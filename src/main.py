@@ -10,11 +10,11 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         # self.setGeometry(100, 100, 1366, 768)
+        self.db_manager = DatabaseManager()
         self.ui_manager = UIManager(self)  # selfを親ウィジェットとして渡す
         self.setCentralWidget(self.ui_manager)  # UIManagerをcentralWidgetとして設定
         self.create_menu_bar()  # MainWindowクラスでメニューバーを作成
         self.statusBar().showMessage("Ready")  # MainWindowのステータスバーを表示
-        self.db_manager = DatabaseManager()
         self.image_processor = ImageProcessor()
         self.tag_manager = TagManager()
         self.setup_connections()

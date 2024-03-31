@@ -20,7 +20,10 @@ class ThumbnailWidget(QWidget):
         # 新しいサムネイル画像をグリッドレイアウトに追加します
         label = QLabel()
         label.setPixmap(pixmap.scaled(self.thumbnail_size, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        label.setAlignment(Qt.AlignCenter)  # ラベルの内容を中央揃えにする
         self.grid_layout.addWidget(label, row, col)
+        self.grid_layout.setRowStretch(row, 1)  # 行の伸縮を設定
+        self.grid_layout.setColumnStretch(col, 1)  # 列の伸縮を設定
 
     def clear_thumbnails(self):
         # すべてのサムネイル画像を削除します

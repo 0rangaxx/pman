@@ -63,6 +63,7 @@ class LeftPanel(QWidget):
         self.clear_button.clicked.connect(self.clear_search_tags)
         self.search_edit.returnPressed.connect(self.update_search_tags) 
         self.current_tag_list.itemDoubleClicked.connect(self.on_current_tag_double_clicked)
+        self.search_tag_list.itemDoubleClicked.connect(self.on_search_tag_double_clicked)
 
     def setup_search_completer(self):
         completer = QCompleter(self)
@@ -81,13 +82,13 @@ class LeftPanel(QWidget):
 
     def update_search_tags(self):
         search_text = self.search_edit.text()
-        if search_text:
-            search_tags = search_text.split(',')
-            self.searching_tags.extend(search_tags)
-            self.search_tag_list.clear()
-            self.search_tag_list.addItems(self.searching_tags)
-            self.search_tags_updated.emit(self.searching_tags)
-            self.search_edit.clear()  # 追加
+        self.search_tag_list.clear()
+        search_tags = search_text.split(',')
+        self.searching_tags.extend(search_tags)
+        self.search_tag_list.clear()
+        self.search_tag_list.addItems(self.searching_tags)
+        self.search_tags_updated.emit(self.searching_tags)
+        self.search_edit.clear()  # 追加
 
     def clear_search_tags(self):
         self.search_edit.clear()
@@ -123,6 +124,14 @@ class LeftPanel(QWidget):
         self.search_edit.clear()  # 検索窓をクリア
         self.search_edit.setText(tag)  # タグを検索窓に挿入
         self.update_search_tags()  # 検索タグを更新
+        
+    def on_search_tag_double_clicked(self, item):
+        tag = item.text()  # タグ文字列を取得
+        if tag in self.searching_tags:
+            self.searching_tags.remove(tag)  # タグを検索タグリストから除外
+            self.search_tag_list.clear()  # search_tag_listをクリア
+            self.search_tag_list.addItems(self.searching_tags)  # search_tag_listを更新
+            self.search_tags_updated.emit(self.searching_tags)  # 検索タグが更新されたことを通知
 
     def show_overview(self):
         # OverviewScreenを表示する処理を追加

@@ -61,6 +61,8 @@ class LeftPanel(QWidget):
     def setup_connections(self):
         self.search_button.clicked.connect(self.update_search_tags)
         self.clear_button.clicked.connect(self.clear_search_tags)
+        self.search_edit.returnPressed.connect(self.update_search_tags) 
+        self.current_tag_list.itemDoubleClicked.connect(self.on_current_tag_double_clicked)
 
     def setup_search_completer(self):
         completer = QCompleter(self)
@@ -85,6 +87,7 @@ class LeftPanel(QWidget):
             self.search_tag_list.clear()
             self.search_tag_list.addItems(self.searching_tags)
             self.search_tags_updated.emit(self.searching_tags)
+            self.search_edit.clear()  # 追加
 
     def clear_search_tags(self):
         self.search_edit.clear()
@@ -114,6 +117,12 @@ class LeftPanel(QWidget):
         
         else:
             self.current_tag_list.clear()
+
+    def on_current_tag_double_clicked(self, item):
+        tag = item.text().split(' (')[0]  # タグ文字列を取得
+        self.search_edit.clear()  # 検索窓をクリア
+        self.search_edit.setText(tag)  # タグを検索窓に挿入
+        self.update_search_tags()  # 検索タグを更新
 
     def show_overview(self):
         # OverviewScreenを表示する処理を追加

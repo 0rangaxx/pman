@@ -56,8 +56,8 @@ class RightPanel(QWidget):
         print("サムネイルをクリアします")
         self.thumbnail_widget.clear_thumbnails()
 
-    def add_thumbnail(self, pixmap, row, col):
-        self.thumbnail_widget.add_thumbnail(pixmap, row, col)
+    def add_thumbnail(self, pixmap, row, col, image_id):  # image_idを引数として受け取る
+        self.thumbnail_widget.add_thumbnail(pixmap, row, col, image_id)  # image_idを引数として渡す
 
     def update_thumbnail_size(self, size):
         self.thumbnail_widget.update_thumbnail_size(size)

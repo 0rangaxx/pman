@@ -13,6 +13,7 @@ class ThumbnailWidget(QWidget):
         super().__init__(parent)
         self.original_images = {}  # オリジナルの画像データを保持する辞書
         self.selected_thumbnails = set()  # 選択されたサムネイルを管理するセット
+        self.selected_ids = []  # 選択中IDリストを追加
         self.setFocusPolicy(Qt.StrongFocus)  # フォーカスを受け取れるようにする
         self.init_ui()
 
@@ -24,7 +25,7 @@ class ThumbnailWidget(QWidget):
         self.setLayout(self.grid_layout)
         self.thumbnail_size = QSize(300, 300)
 
-    def add_thumbnail(self, image_data, row, col):
+    def add_thumbnail(self, image_data, row, col, image_id):
         qimage = QImage.fromData(image_data)
         pixmap = QPixmap.fromImage(qimage)
         # 新しいサムネイル画像をグリッドレイアウトに追加します
@@ -34,7 +35,7 @@ class ThumbnailWidget(QWidget):
         self.grid_layout.addWidget(label, row, col)
         self.grid_layout.setRowStretch(row, 1)  # 行の伸縮を設定
         self.grid_layout.setColumnStretch(col, 1)  # 列の伸縮を設定
-        self.original_images[(row, col)] = image_data  # オリジナルの画像データを保持
+        self.original_images[(row, col)] = (image_data, image_id)  # IDも一緒に保持
         label.mousePressEvent = lambda event, r=row, c=col: self.mousePressEvent(event, r, c)  # マウスイベントを修正
 
     def keyPressEvent(self, event):
@@ -59,14 +60,18 @@ class ThumbnailWidget(QWidget):
             self.highlight_thumbnail(row, col)
             self.thumbnail_right_clicked.emit(event, row, col)  # 右クリック時にシグナルを発信し、イベント、行、列を含める
         else:
-            if modifiers & Qt.ControlModifier:  # Ctrlキーが押されている場合
+            if modifiers & Qt.ControlModifier:
                 if (row, col) in self.selected_thumbnails:
-                    self.selected_thumbnails.remove((row, col))  # 選択状態を解除
+                    self.selected_thumbnails.remove((row, col))
+                    _, image_id = self.original_images[(row, col)]
+                    self.selected_ids.remove(image_id)  # IDリストから除外
                     self.unhighlight_thumbnail(row, col)
                 else:
-                    self.selected_thumbnails.add((row, col))  # 選択状態を追加
+                    self.selected_thumbnails.add((row, col))
+                    _, image_id = self.original_images[(row, col)]
+                    self.selected_ids.append(image_id)  # IDリストに追加
                     self.highlight_thumbnail(row, col)
-            elif modifiers & Qt.ShiftModifier:  # Shiftキーが押されている場合
+            elif modifiers & Qt.ShiftModifier:
                 # 範囲選択の処理を追加
                 if self.selected_thumbnails:
                     start_row, start_col = min(self.selected_thumbnails)
@@ -75,16 +80,21 @@ class ThumbnailWidget(QWidget):
                         for j in range(self.grid_layout.columnCount()):
                             if (min(start_col, col) <= j <= max(start_col, col)):
                                 self.selected_thumbnails.add((i, j))
+                                _, image_id = self.original_images[(i, j)]
+                                self.selected_ids.append(image_id)  # IDリストに追加
                                 self.highlight_thumbnail(i, j)
                 else:
                     self.selected_thumbnails.add((row, col))
                     self.highlight_thumbnail(row, col)
             else:
                 self.selected_thumbnails.clear()  # 選択状態をクリア
+                self.selected_ids.clear()  # IDリストをクリア
                 for i in range(self.grid_layout.rowCount()):
                     for j in range(self.grid_layout.columnCount()):
                         self.unhighlight_thumbnail(i, j)
-                self.selected_thumbnails.add((row, col))  # 新しく選択状態を追加
+                self.selected_thumbnails.add((row, col))
+                _, image_id = self.original_images[(row, col)]
+                self.selected_ids.append(image_id)  # IDリストに追加
                 self.highlight_thumbnail(row, col)
         self.thumbnail_clicked.emit(row, col, modifiers & Qt.ControlModifier)  # 選択状態を通知
 
@@ -109,6 +119,8 @@ class ThumbnailWidget(QWidget):
             if widget:
                 widget.deleteLater()
         self.original_images.clear()  # オリジナルの画像データもクリア
+        self.selected_thumbnails.clear()
+        self.selected_ids.clear()  # IDリストをクリア
         print("すべてのサムネイル画像が削除されました")
 
     def update_thumbnail_size(self, size):

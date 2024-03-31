@@ -250,7 +250,8 @@ class UIManager(QWidget):
         for attributes in attributes_list:
             if attributes:
                 thumbnail_data = attributes['thumbnail']
-                self.right_panel.add_thumbnail(thumbnail_data, row, col)
+                image_id = attributes['id']  # image_idを取得
+                self.right_panel.add_thumbnail(thumbnail_data, row, col, image_id)  # image_idを引数として渡す
                 col += 1
                 if col >= num_columns:
                     col = 0

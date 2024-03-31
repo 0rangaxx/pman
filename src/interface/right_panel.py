@@ -11,6 +11,8 @@ class RightPanel(QWidget):
         self.directory_button = QPushButton("ディレクトリ選択")
         self.init_ui()
         self.directory_button.clicked.connect(self.open_directory_dialog)  # ディレクトリ選択ボタンがクリックされたときの処理を設定
+        self.thumbnail_widget.thumbnail_clicked.connect(self.highlight_thumbnail)  # シグナルとスロットを接続
+
 
     def init_ui(self):
         # 全体のレイアウトを定義
@@ -35,6 +37,17 @@ class RightPanel(QWidget):
         layout.addWidget(self.scroll_area)
 
         self.setLayout(layout)
+        
+    def highlight_thumbnail(self, row, col):
+        for i in range(self.thumbnail_widget.grid_layout.rowCount()):
+            for j in range(self.thumbnail_widget.grid_layout.columnCount()):
+                item = self.thumbnail_widget.grid_layout.itemAtPosition(i, j)
+                if item:
+                    label = item.widget()
+                    if i == row and j == col:
+                        label.setStyleSheet("border: 2px solid red;")  # ハイライトを設定
+                    else:
+                        label.setStyleSheet("border: none;")  # ハイライトを解除
 
     def open_directory_dialog(self):
         print("ディレクトリ選択ダイアログを開きます")

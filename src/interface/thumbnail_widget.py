@@ -1,9 +1,12 @@
 from PyQt5.QtWidgets import QWidget, QGridLayout, QLabel
-from PyQt5.QtCore import Qt, QSize
+from PyQt5.QtCore import Qt, QSize, pyqtSignal
 from PyQt5.QtGui import QPixmap, QImage
+
 
 # ThumbnailWidgetクラスはサムネイル画像を表示するためのウィジェットです
 class ThumbnailWidget(QWidget):
+    thumbnail_clicked = pyqtSignal(int, int)  # シグナルを追加
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.original_images = {}  # オリジナルの画像データを保持する辞書
@@ -28,7 +31,11 @@ class ThumbnailWidget(QWidget):
         self.grid_layout.setRowStretch(row, 1)  # 行の伸縮を設定
         self.grid_layout.setColumnStretch(col, 1)  # 列の伸縮を設定
         self.original_images[(row, col)] = image_data  # オリジナルの画像データを保持
+        label.mousePressEvent = lambda event, r=row, c=col: self.on_thumbnail_clicked(r, c)  # マウスイベントを設定
 
+    def on_thumbnail_clicked(self, row, col):
+        self.thumbnail_clicked.emit(row, col)  # クリックされた位置を通知
+        
     def clear_thumbnails(self):
         # すべてのサムネイル画像を削除します
         while self.grid_layout.count():

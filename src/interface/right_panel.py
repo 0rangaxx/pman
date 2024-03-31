@@ -11,7 +11,7 @@ class RightPanel(QWidget):
         self.directory_button = QPushButton("ディレクトリ選択")
         self.init_ui()
         self.directory_button.clicked.connect(self.open_directory_dialog)  # ディレクトリ選択ボタンがクリックされたときの処理を設定
-        self.thumbnail_widget.thumbnail_clicked.connect(self.highlight_thumbnail)  # シグナルとスロットを接続
+        self.thumbnail_widget.thumbnail_clicked.connect(self.highlight_thumbnail)  # シグナルとスロットを修正
 
 
     def init_ui(self):
@@ -37,17 +37,26 @@ class RightPanel(QWidget):
         layout.addWidget(self.scroll_area)
 
         self.setLayout(layout)
-        
-    def highlight_thumbnail(self, row, col):
-        for i in range(self.thumbnail_widget.grid_layout.rowCount()):
-            for j in range(self.thumbnail_widget.grid_layout.columnCount()):
-                item = self.thumbnail_widget.grid_layout.itemAtPosition(i, j)
-                if item:
-                    label = item.widget()
-                    if i == row and j == col:
-                        label.setStyleSheet("border: 2px solid red;")  # ハイライトを設定
-                    else:
-                        label.setStyleSheet("border: none;")  # ハイライトを解除
+
+    def highlight_thumbnail(self, row, col, ctrl_pressed):
+        item = self.thumbnail_widget.grid_layout.itemAtPosition(row, col)
+        if item:
+            label = item.widget()
+            if (row, col) in self.thumbnail_widget.selected_thumbnails:
+                label.setStyleSheet("background-color: rgba(0, 0, 255, 0.3);")  # 選択状態のハイライトを設定
+                # label.setStyleSheet("border: 2px solid red;")  # 選択状態のハイライトを設定
+            else:
+                label.setStyleSheet("background-color: none;")  # 選択状態を解除
+                # label.setStyleSheet("border: none;")  # 選択状態を解除
+
+        if not ctrl_pressed:
+            for i in range(self.thumbnail_widget.grid_layout.rowCount()):
+                for j in range(self.thumbnail_widget.grid_layout.columnCount()):
+                    if (i, j) != (row, col):
+                        item = self.thumbnail_widget.grid_layout.itemAtPosition(i, j)
+                        if item:
+                            label = item.widget()
+                            label.setStyleSheet("background-color: none;")  # 他の選択状態を解除
 
     def open_directory_dialog(self):
         print("ディレクトリ選択ダイアログを開きます")

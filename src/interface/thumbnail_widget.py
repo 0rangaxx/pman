@@ -5,11 +5,13 @@ from PyQt5.QtGui import QPixmap, QImage
 
 # ThumbnailWidgetクラスはサムネイル画像を表示するためのウィジェットです
 class ThumbnailWidget(QWidget):
-    thumbnail_clicked = pyqtSignal(int, int)  # シグナルを追加
+    thumbnail_clicked = pyqtSignal(int, int, bool)  # シグナルに選択状態を追加
+
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.original_images = {}  # オリジナルの画像データを保持する辞書
+        self.selected_thumbnails = set()  # 選択されたサムネイルを管理するセット
         self.init_ui()
 
     def init_ui(self):
@@ -31,11 +33,20 @@ class ThumbnailWidget(QWidget):
         self.grid_layout.setRowStretch(row, 1)  # 行の伸縮を設定
         self.grid_layout.setColumnStretch(col, 1)  # 列の伸縮を設定
         self.original_images[(row, col)] = image_data  # オリジナルの画像データを保持
-        label.mousePressEvent = lambda event, r=row, c=col: self.on_thumbnail_clicked(r, c)  # マウスイベントを設定
+        label.mousePressEvent = lambda event, r=row, c=col: self.on_thumbnail_clicked(event, r, c)  # マウスイベントを修正
 
-    def on_thumbnail_clicked(self, row, col):
-        self.thumbnail_clicked.emit(row, col)  # クリックされた位置を通知
-        
+    def on_thumbnail_clicked(self, event, row, col):
+        modifiers = event.modifiers()
+        if modifiers & Qt.ControlModifier:  # Ctrlキーが押されている場合
+            if (row, col) in self.selected_thumbnails:
+                self.selected_thumbnails.remove((row, col))  # 選択状態を解除
+            else:
+                self.selected_thumbnails.add((row, col))  # 選択状態を追加
+        else:
+            self.selected_thumbnails.clear()  # 選択状態をクリア
+            self.selected_thumbnails.add((row, col))  # 新しく選択状態を追加
+        self.thumbnail_clicked.emit(row, col, modifiers & Qt.ControlModifier)  # 選択状態を通知
+
     def clear_thumbnails(self):
         # すべてのサムネイル画像を削除します
         while self.grid_layout.count():

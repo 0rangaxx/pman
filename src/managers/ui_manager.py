@@ -54,7 +54,7 @@ class UIManager(QWidget):
         シグナルとスロットの接続を設定する
         """
         self.left_panel.search_tags_updated.connect(self.update_search_tags)
-        # self.left_panel.current_tags_updated.connect(self.update_current_tags)
+        self.left_panel.search_tags_updated.connect(self.display_thumbnails)
 
     def show_context_menu(self, position):
         context_menu = ContextMenu(self)
@@ -234,7 +234,7 @@ class UIManager(QWidget):
         })
         print(f"ファイルをデータベースに記録: {file_name}")  # ファイルをデータベースに記録したことをprintする
 
-    def display_thumbnails(self):
+    def display_thumbnails(self, search_tags=None):
         """
         サムネイル画像を表示する
         """
@@ -246,10 +246,8 @@ class UIManager(QWidget):
 
         displayTags = []
         row, col = 0, 0
-        for file_path, _ in self.iFiles:
-            file_name = os.path.basename(file_path)
-            directory_path = os.path.dirname(file_path)
-            attributes = self.db_manager.retrieve_image_attributes_by_file_name(file_name, directory_path)
+        attributes_list = [self.db_manager.retrieve_image_attributes_by_file_name(os.path.basename(file_path), os.path.dirname(file_path), search_tags) for file_path, _ in self.iFiles]
+        for attributes in attributes_list:
             if attributes:
                 thumbnail_data = attributes['thumbnail']
                 pixmap = QPixmap()
@@ -266,7 +264,6 @@ class UIManager(QWidget):
                     displayTags.append(prompt)
 
         self.left_panel.update_current_tags(displayTags)
-        # self.thumbnail_display_requested.emit()
 
     def update_search_tags(self, search_tags):
         print(f"検索タグが更新されました: {search_tags}")  # 検索タグが更新されたことをprintする

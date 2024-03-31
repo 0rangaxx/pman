@@ -207,16 +207,31 @@ class DatabaseManager:
             print(f"画像の属性の取得中にエラーが発生しました: {e}")
             return None
 
-    def retrieve_image_attributes_by_file_name(self, file_name: str, directory_path: str) -> Optional[Dict[str, str]]:
+    def retrieve_image_attributes_by_file_name(self, file_name: str, directory_path: str, search_tags: List[str] = None) -> Optional[Dict[str, str]]:
         """ファイル名とディレクトリパスに基づいて画像の属性を取得します。"""
         try:
             with self._connect() as conn:
                 cursor = conn.cursor()
-                cursor.execute('''
-                    SELECT *
-                    FROM image_attributes
-                    WHERE file_name = ? AND directory_path = ?
-                ''', (file_name, directory_path))
+                
+                if search_tags:
+                    # 動的にLIKE条件を生成
+                    like_conditions = " AND ".join(["prompt LIKE ?" for _ in search_tags])
+                    query = f'''
+                        SELECT *
+                        FROM image_attributes
+                        WHERE file_name = ? AND directory_path = ? AND {like_conditions}
+                    '''
+                    # タプルにファイル名、ディレクトリパス、検索タグを順に追加
+                    params = (file_name, directory_path, *[f'%{tag}%' for tag in search_tags])
+                else:
+                    query = '''
+                        SELECT *
+                        FROM image_attributes
+                        WHERE file_name = ? AND directory_path = ?
+                    '''
+                    params = (file_name, directory_path)
+
+                cursor.execute(query, params)
                 result = cursor.fetchone()
                 if result:
                     attributes = {

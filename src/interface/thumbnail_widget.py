@@ -1,11 +1,12 @@
 from PyQt5.QtWidgets import QWidget, QGridLayout, QLabel
 from PyQt5.QtCore import Qt, QSize
-from PyQt5.QtGui import QPixmap
+from PyQt5.QtGui import QPixmap, QImage
 
 # ThumbnailWidgetクラスはサムネイル画像を表示するためのウィジェットです
 class ThumbnailWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.original_images = {}  # オリジナルの画像データを保持する辞書
         self.init_ui()
 
     def init_ui(self):
@@ -16,7 +17,9 @@ class ThumbnailWidget(QWidget):
         self.setLayout(self.grid_layout)
         self.thumbnail_size = QSize(300, 300)
 
-    def add_thumbnail(self, pixmap, row, col):
+    def add_thumbnail(self, image_data, row, col):
+        qimage = QImage.fromData(image_data)
+        pixmap = QPixmap.fromImage(qimage)
         # 新しいサムネイル画像をグリッドレイアウトに追加します
         label = QLabel()
         label.setPixmap(pixmap.scaled(self.thumbnail_size, Qt.KeepAspectRatio, Qt.SmoothTransformation))
@@ -24,6 +27,7 @@ class ThumbnailWidget(QWidget):
         self.grid_layout.addWidget(label, row, col)
         self.grid_layout.setRowStretch(row, 1)  # 行の伸縮を設定
         self.grid_layout.setColumnStretch(col, 1)  # 列の伸縮を設定
+        self.original_images[(row, col)] = image_data  # オリジナルの画像データを保持
 
     def clear_thumbnails(self):
         # すべてのサムネイル画像を削除します
@@ -32,15 +36,24 @@ class ThumbnailWidget(QWidget):
             widget = item.widget()
             if widget:
                 widget.deleteLater()
+        self.original_images.clear()  # オリジナルの画像データもクリア
         print("すべてのサムネイル画像が削除されました")
 
     def update_thumbnail_size(self, size):
-        # サムネイル画像のサイズを更新します
         self.thumbnail_size = size
-        for i in range(self.grid_layout.count()):
-            label = self.grid_layout.itemAt(i).widget()
-            pixmap = label.pixmap()
-            label.setPixmap(pixmap.scaled(self.thumbnail_size, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        for i in range(self.grid_layout.rowCount()):
+            for j in range(self.grid_layout.columnCount()):
+                item = self.grid_layout.itemAtPosition(i, j)
+                if item:
+                    label = item.widget()
+                    image_data = self.original_images.get((i, j))
+                    if image_data:
+                        qimage = QImage.fromData(image_data)
+                        pixmap = QPixmap.fromImage(qimage)
+                        label.setPixmap(pixmap.scaled(self.thumbnail_size, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+                    label.setAlignment(Qt.AlignCenter)
+                    self.grid_layout.setRowStretch(i, 1)
+                    self.grid_layout.setColumnStretch(j, 1)
         print(f"サムネイル画像のサイズが{self.thumbnail_size}に更新されました")
 
     def wheelEvent(self, event):

@@ -250,9 +250,7 @@ class UIManager(QWidget):
         for attributes in attributes_list:
             if attributes:
                 thumbnail_data = attributes['thumbnail']
-                pixmap = QPixmap()
-                pixmap.loadFromData(thumbnail_data, "JPEG")
-                self.right_panel.add_thumbnail(pixmap, row, col)
+                self.right_panel.add_thumbnail(thumbnail_data, row, col)
                 col += 1
                 if col >= num_columns:
                     col = 0

@@ -9,7 +9,7 @@ from tag_manager import TagManager
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setGeometry(100, 100, 1366, 768)
+        # self.setGeometry(100, 100, 1366, 768)
         self.ui_manager = UIManager(self)  # selfを親ウィジェットとして渡す
         self.setCentralWidget(self.ui_manager)  # UIManagerをcentralWidgetとして設定
         self.create_menu_bar()  # MainWindowクラスでメニューバーを作成
@@ -18,6 +18,14 @@ class MainWindow(QMainWindow):
         self.image_processor = ImageProcessor()
         self.tag_manager = TagManager()
         self.setup_connections()
+
+        # ウィンドウのサイズと位置をconfig_managerから取得して設定
+        geometry = self.ui_manager.config_manager.get_window_geometry()
+        if geometry:
+            self.setGeometry(*geometry)
+        else:
+            self.setGeometry(100, 100, 1366, 768)
+
         print("MainWindowが初期化されました")
 
     # def on_directory_selected(self, directory):
@@ -46,6 +54,18 @@ class MainWindow(QMainWindow):
         self.db_manager.connect()
         super().show()
         print("データベースに接続し、MainWindowが表示されました")
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        # ウィンドウのサイズと位置をconfig_managerに保存
+        geometry = self.geometry().getRect()
+        self.ui_manager.config_manager.set_window_geometry(geometry)
+
+    def moveEvent(self, event):
+        super().moveEvent(event)
+        # ウィンドウのサイズと位置をconfig_managerに保存
+        geometry = self.geometry().getRect()
+        self.ui_manager.config_manager.set_window_geometry(geometry)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

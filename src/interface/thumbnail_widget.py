@@ -44,8 +44,11 @@ class ThumbnailWidget(QWidget):
         if event.modifiers() & Qt.ControlModifier and event.key() == Qt.Key_A:
             self.select_all_thumbnails()
         elif event.key() == Qt.Key_F:
-            # fキーだけが押されたときの処理をここに記述
             self.toggle_fav_selected_images()
+        elif event.key() == Qt.Key_N: 
+            self.toggle_nsfw_selected_images()
+        elif event.key() == Qt.Key_Delete:
+            self.toggle_trash_selected_images()
         else:
             super().keyPressEvent(event)
 
@@ -56,7 +59,9 @@ class ThumbnailWidget(QWidget):
                 self.selected_thumbnails.add((i, j))
                 self.highlight_thumbnail(i, j)  # 引数を3つに変更
     
-    def mousePressEvent(self, event, row, col):
+    def mousePressEvent(self, event, row=None, col=None):
+        if row == None:
+            return
         modifiers = event.modifiers()  # 修飾キーの状態を取得
         if event.button() == Qt.RightButton:
             if len(self.selected_thumbnails) <= 1:
@@ -102,6 +107,7 @@ class ThumbnailWidget(QWidget):
                 self.selected_ids.append(image_id)  # IDリストに追加
                 self.highlight_thumbnail(row, col)
         self.thumbnail_clicked.emit(row, col, modifiers & Qt.ControlModifier)  # 選択状態を通知
+
 
 
     def highlight_thumbnail(self, row, col):
@@ -173,4 +179,34 @@ class ThumbnailWidget(QWidget):
             attributes = self.db_manager.retrieve_image_attributes(image_id)
             if attributes:
                 attributes['fav_flag'] = 1 - attributes['fav_flag']
+                self.db_manager.update_image_attributes(image_id, attributes)
+
+    def toggle_nsfw_selected_images(self):  # ← この関数を追加
+        selected_ids = []
+        for pos in self.selected_thumbnails:
+            if pos in self.original_images:
+                _, image_id = self.original_images[pos]
+                selected_ids.append(image_id)
+            else:
+                print(f"Warning: Position {pos} not found in original_images")
+
+        for image_id in selected_ids:
+            attributes = self.db_manager.retrieve_image_attributes(image_id)
+            if attributes:
+                attributes['nsfw_flag'] = 1 - attributes['nsfw_flag']
+                self.db_manager.update_image_attributes(image_id, attributes)
+
+    def toggle_trash_selected_images(self):
+        selected_ids = []
+        for pos in self.selected_thumbnails:
+            if pos in self.original_images:
+                _, image_id = self.original_images[pos]
+                selected_ids.append(image_id)
+            else:
+                print(f"Warning: Position {pos} not found in original_images")
+
+        for image_id in selected_ids:
+            attributes = self.db_manager.retrieve_image_attributes(image_id)
+            if attributes:
+                attributes['trash_flag'] = 1 - attributes['trash_flag']
                 self.db_manager.update_image_attributes(image_id, attributes)

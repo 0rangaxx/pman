@@ -30,10 +30,11 @@ class UIManager(QWidget):
         self.delimiter = self.config_manager.get_delimiter()
         self.directory = self.config_manager.get_directory()
         self.iFiles = []
-        self.fav_flg = None
+        self.fav_flag = None
+        self.nsfw_flag = 0
+        self.trash_flag = 0
 
         self.right_panel = RightPanel(self)  # selfを親ウィジェットとして渡す
-        self.right_panel.directory_selected.connect(self.on_directory_button_clicked)  # シグナルに接続
         self.create_main_layout()
         self.setup_connections()
 
@@ -54,9 +55,14 @@ class UIManager(QWidget):
         """
         シグナルとスロットの接続を設定する
         """
+        self.right_panel.directory_selected.connect(self.on_directory_button_clicked)
         self.left_panel.search_tags_updated.connect(self.update_search_tags)
         self.left_panel.search_tags_updated.connect(self.display_thumbnails)
         self.left_panel.fav_flag_changed.connect(self.on_fav_flag_changed)
+        self.left_panel.nsfw_flag_changed.connect(self.on_nsfw_flag_changed)
+        self.left_panel.trash_flag_changed.connect(self.on_trash_flag_changed)
+
+
 
     def show_context_menu(self, position):
         context_menu = ContextMenu(self)
@@ -143,7 +149,23 @@ class UIManager(QWidget):
             self.fav_flag = 1
         else:
             self.fav_flag = None
-        self.display_thumbnails(search_tags, self.fav_flag)
+        self.display_thumbnails(search_tags)
+
+    def on_nsfw_flag_changed(self, checked):
+        search_tags = self.left_panel.searching_tags.copy()
+        if checked:
+            self.nsfw_flag = 1
+        else:
+            self.nsfw_flag = 0
+        self.display_thumbnails(search_tags)
+
+    def on_trash_flag_changed(self, checked):
+        search_tags = self.left_panel.searching_tags.copy()
+        if checked:
+            self.trash_flag = 1
+        else:
+            self.trash_flag = 0
+        self.display_thumbnails(search_tags)
 
     def extract_metadata(self, image_path):
         """
@@ -244,7 +266,7 @@ class UIManager(QWidget):
         })
         print(f"ファイルをデータベースに記録: {file_name}")  # ファイルをデータベースに記録したことをprintする
 
-    def display_thumbnails(self, search_tags=None, fav_flag=None):
+    def display_thumbnails(self, search_tags=None):
         """
         サムネイル画像を表示する
         """
@@ -256,7 +278,7 @@ class UIManager(QWidget):
 
         displayTags = []
         row, col = 0, 0
-        attributes_list = [self.db_manager.retrieve_image_attributes_by_file_name(os.path.basename(file_path), os.path.dirname(file_path), search_tags, fav_flag) for file_path, _ in self.iFiles]
+        attributes_list = [self.db_manager.retrieve_image_attributes_by_file_name(os.path.basename(file_path), os.path.dirname(file_path), search_tags, self.fav_flag, self.nsfw_flag, self.trash_flag) for file_path, _ in self.iFiles]
         for attributes in attributes_list:
             if attributes:
                 thumbnail_data = attributes['thumbnail']

@@ -241,14 +241,21 @@ class UIManager(QWidget):
         metadata = self.extract_metadata(file_path)
 
         if metadata is not None:
-            print('metadata ok')  # メタデータが取得できたことをprintする
+            print('metadata ok')
             softwear, prompt, negative_prompt, description = metadata
         else:
-            print('metadata none')  # メタデータが取得できなかったことをprintする
+            print('metadata none')
             softwear, prompt, negative_prompt, description = "", "", "", ""
 
-        with Image.open(file_path) as img:
-            original_size = img.size
+        try:
+            with Image.open(file_path) as img:
+                original_size = img.size
+        except FileNotFoundError:
+            print(f"File not found: {file_path}")
+            return
+        except OSError:
+            print(f"Error opening file: {file_path}")
+            return
 
         thumbnail_size = (original_size[0] // 2, original_size[1] // 2)
         thumbnail_data = self.image_processor.generate_thumbnail(file_path, size=thumbnail_size)
@@ -264,7 +271,7 @@ class UIManager(QWidget):
             'negative_prompt': negative_prompt,
             'description': description
         })
-        print(f"ファイルをデータベースに記録: {file_name}")  # ファイルをデータベースに記録したことをprintする
+        print(f"ファイルをデータベースに記録: {file_name}")
 
     def display_thumbnails(self, search_tags=None):
         """

@@ -266,7 +266,6 @@ class DatabaseManager:
                     }
                     # print(f"nsfw:{attributes['nsfw_flag']} ,trash:{attributes['trash_flag']} ,  ")
                     return attributes
-                print(f"ファイル名: {file_name} の画像が見つかりませんでした")
                 return None
         except sqlite3.Error as e:
             print(f"画像の属性の取得中にエラーが発生しました: {e}")

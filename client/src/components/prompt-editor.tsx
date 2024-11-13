@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertPromptSchema, type Prompt } from "db/schema";
@@ -53,12 +53,12 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
 
   const form = useForm({
     resolver: zodResolver(insertPromptSchema),
-    defaultValues: defaultValues,
+    defaultValues: prompt || defaultValues,
   });
 
+  // Only reset form when prompt changes
   useEffect(() => {
     if (prompt) {
-      console.log('Resetting form with prompt:', prompt);
       form.reset({
         title: prompt.title,
         content: prompt.content,
@@ -75,7 +75,7 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
   const tags = form.watch("tags") || [];
   const metadata = form.watch("metadata") || {};
 
-  const handleAddTag = (e: React.KeyboardEvent) => {
+  const handleAddTag = useCallback((e: React.KeyboardEvent) => {
     if (e.key === "Enter" && newTag.trim()) {
       e.preventDefault();
       const currentTags = form.getValues("tags") || [];
@@ -84,17 +84,17 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
       }
       setNewTag("");
     }
-  };
+  }, [newTag, form]);
 
-  const handleRemoveTag = (tagToRemove: string) => {
+  const handleRemoveTag = useCallback((tagToRemove: string) => {
     const currentTags = form.getValues("tags") || [];
     form.setValue(
       "tags",
       currentTags.filter((tag) => tag !== tagToRemove)
     );
-  };
+  }, [form]);
 
-  const handleAddMetadata = () => {
+  const handleAddMetadata = useCallback(() => {
     if (newMetadataKey.trim() && newMetadataValue.trim()) {
       const currentMetadata = form.getValues("metadata") || {};
       form.setValue("metadata", {
@@ -104,15 +104,15 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
       setNewMetadataKey("");
       setNewMetadataValue("");
     }
-  };
+  }, [newMetadataKey, newMetadataValue, form]);
 
-  const handleRemoveMetadata = (key: string) => {
+  const handleRemoveMetadata = useCallback((key: string) => {
     const currentMetadata = form.getValues("metadata") || {};
     const { [key]: _, ...rest } = currentMetadata;
     form.setValue("metadata", rest);
-  };
+  }, [form]);
 
-  const handleFormatContent = () => {
+  const handleFormatContent = useCallback(() => {
     setIsFormatting(true);
     const content = form.getValues("content");
     const formatted = content
@@ -127,16 +127,16 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
     });
     
     setIsFormatting(false);
-  };
+  }, [form, toast]);
 
-  const handleCopyContent = async () => {
+  const handleCopyContent = useCallback(async () => {
     const content = form.getValues("content");
     await navigator.clipboard.writeText(content);
     toast({
       title: "コピーしました",
       description: "内容をクリップボードにコピーしました。",
     });
-  };
+  }, [form, toast]);
 
   const onSubmit = async (values: any) => {
     try {
@@ -148,18 +148,14 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
           metadata: values.metadata || {},
         };
         const updatedPrompt = await updatePrompt(prompt.id, updateData);
-        console.log('Update successful:', updatedPrompt);
         toast({ title: "Prompt updated successfully" });
-        // Keep the updated prompt selected
         setSelectedPrompt(updatedPrompt);
       } else {
         const newPrompt = await createPrompt(values);
-        console.log('Created prompt:', newPrompt);
         toast({ title: "Prompt created successfully" });
         onClose();
       }
     } catch (error) {
-      console.error('Form submission error:', error);
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Something went wrong",
@@ -171,7 +167,6 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
   };
 
   const handleSubmit = form.handleSubmit((values) => {
-    console.log('Form values before submission:', values);
     return onSubmit(values);
   });
 

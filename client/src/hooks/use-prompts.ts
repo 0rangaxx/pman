@@ -16,11 +16,7 @@ export function usePrompts() {
         metadata: prompt.metadata || {},
       };
       
-      setPrompts((currentPrompts) => {
-        console.log('Creating new prompt:', newPrompt);
-        return [...currentPrompts, newPrompt];
-      });
-      
+      setPrompts((currentPrompts) => [...currentPrompts, newPrompt]);
       return newPrompt;
     } catch (error) {
       console.error('Error creating prompt:', error);
@@ -30,7 +26,7 @@ export function usePrompts() {
 
   const updatePrompt = useCallback(async (id: number, promptUpdate: Partial<Prompt>) => {
     try {
-      let updatedPrompt: Prompt;
+      let updatedPrompt: Prompt | undefined;
       setPrompts((currentPrompts) => {
         const index = currentPrompts.findIndex((p) => p.id === id);
         if (index === -1) throw new Error("Prompt not found");
@@ -44,7 +40,7 @@ export function usePrompts() {
         updatedPrompts[index] = updatedPrompt;
         return updatedPrompts;
       });
-      return updatedPrompt;
+      return updatedPrompt!;
     } catch (error) {
       console.error('Error updating prompt:', error);
       throw error;
@@ -64,7 +60,7 @@ export function usePrompts() {
 
   return {
     prompts,
-    isLoading: false, // Local storage is synchronous
+    isLoading: false,
     isError: false,
     error: null,
     createPrompt,

@@ -16,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { usePrompts } from "../hooks/use-prompts";
 import { Badge } from "@/components/ui/badge";
-import { X, Plus, Loader2, Wand2 } from "lucide-react";
+import { X, Plus, Loader2, Wand2, Copy } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -108,6 +108,15 @@ export function PromptEditor({ prompt, onClose }: PromptEditorProps) {
     setIsFormatting(false);
   };
 
+  const handleCopyContent = async () => {
+    const content = form.getValues("content");
+    await navigator.clipboard.writeText(content);
+    toast({
+      title: "コピーしました",
+      description: "内容をクリップボードにコピーしました。",
+    });
+  };
+
   const onSubmit = async (values: any) => {
     try {
       setIsSubmitting(true);
@@ -180,16 +189,27 @@ export function PromptEditor({ prompt, onClose }: PromptEditorProps) {
                     <FormControl className="flex-1">
                       <Textarea {...field} className="min-h-[200px]" />
                     </FormControl>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={handleFormatContent}
-                      disabled={isFormatting}
-                      className="self-start"
-                    >
-                      <Wand2 className={`h-4 w-4 ${isFormatting ? 'animate-spin' : ''}`} />
-                    </Button>
+                    <div className="flex flex-col gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={handleFormatContent}
+                        disabled={isFormatting}
+                        className="self-start"
+                      >
+                        <Wand2 className={`h-4 w-4 ${isFormatting ? 'animate-spin' : ''}`} />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={handleCopyContent}
+                        className="self-start"
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                   <FormMessage />
                 </FormItem>

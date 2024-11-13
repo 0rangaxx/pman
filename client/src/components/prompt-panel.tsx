@@ -14,7 +14,7 @@ import { isWithinInterval } from "date-fns";
 import { cn } from "@/lib/utils";
 
 export function PromptPanel() {
-  const { prompts, isLoading } = usePrompts();
+  const { prompts, isLoading, refreshPrompts } = usePrompts();
   const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
   const [searchCriteria, setSearchCriteria] = useState<SearchCriteria>({
     query: "",
@@ -111,7 +111,8 @@ export function PromptPanel() {
     console.log('Closing editor, refreshing list');
     setSelectedPrompt(null);
     setIsCreating(false);
-  }, []);
+    refreshPrompts(); // Force refresh when editor closes
+  }, [refreshPrompts]);
 
   const handleTagClick = useCallback((tag: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -172,7 +173,10 @@ export function PromptPanel() {
               </div>
             </div>
 
-            <ScrollArea className="flex-1 mt-4" key={`${prompts?.length}-${showLikedOnly}-${showNsfwOnly}-${searchCriteria.query}`}>
+            <ScrollArea 
+              className="flex-1 mt-4" 
+              key={`${prompts?.length}-${showLikedOnly}-${showNsfwOnly}-${searchCriteria.query}-${Date.now()}`}
+            >
               {isLoading ? (
                 <div className="flex items-center justify-center p-4">
                   <Loader2 className="h-6 w-6 animate-spin" />

@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { isWithinInterval, parseISO } from "date-fns";
+import { cn } from "@/lib/utils";
 
 export function PromptPanel() {
   const { prompts, isLoading } = usePrompts();
@@ -113,8 +114,8 @@ export function PromptPanel() {
     setSearchCriteria(prev => ({
       ...prev,
       selectedTags: prev.selectedTags.includes(tag)
-        ? prev.selectedTags
-        : [...prev.selectedTags, tag]
+        ? prev.selectedTags.filter(t => t !== tag)  // Remove tag if already selected
+        : [...prev.selectedTags, tag]  // Add tag if not selected
     }));
   };
 
@@ -192,8 +193,13 @@ export function PromptPanel() {
                           {prompt.tags.map((tag) => (
                             <Badge 
                               key={tag} 
-                              variant="secondary" 
-                              className="text-xs cursor-pointer hover:bg-secondary/80"
+                              variant={searchCriteria.selectedTags.includes(tag) ? "default" : "secondary"}
+                              className={cn(
+                                "text-xs cursor-pointer",
+                                searchCriteria.selectedTags.includes(tag)
+                                  ? "hover:bg-primary/80"
+                                  : "hover:bg-secondary/80"
+                              )}
                               onClick={(e) => handleTagClick(tag, e)}
                             >
                               {tag}

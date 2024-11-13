@@ -30,18 +30,18 @@ export function usePrompts() {
 
   const updatePrompt = useCallback(async (id: number, promptUpdate: Partial<Prompt>) => {
     try {
-      let updatedPrompt: Prompt | undefined;
+      let updatedPrompt: Prompt;
       setPrompts((currentPrompts) => {
         const index = currentPrompts.findIndex((p) => p.id === id);
-        if (index === -1) return currentPrompts;
+        if (index === -1) throw new Error("Prompt not found");
 
         const updatedPrompts = [...currentPrompts];
-        updatedPrompts[index] = {
+        updatedPrompt = {
           ...updatedPrompts[index],
           ...promptUpdate,
           updatedAt: new Date().toISOString(),
         };
-        updatedPrompt = updatedPrompts[index];
+        updatedPrompts[index] = updatedPrompt;
         return updatedPrompts;
       });
       return updatedPrompt;

@@ -150,10 +150,8 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
         const updatedPrompt = await updatePrompt(prompt.id, updateData);
         console.log('Update successful:', updatedPrompt);
         toast({ title: "Prompt updated successfully" });
-        // Clear the form and selected prompt
-        form.reset(defaultValues);
-        setSelectedPrompt(null);
-        onClose();
+        // Keep the updated prompt selected
+        setSelectedPrompt(updatedPrompt);
       } else {
         const newPrompt = await createPrompt(values);
         console.log('Created prompt:', newPrompt);

@@ -40,6 +40,13 @@ export function setupAuth(app: Express) {
   // Add error handling middleware for authentication
   app.use((err: any, req: any, res: any, next: any) => {
     console.error('Authentication Error:', err);
+    // Check specifically for callback URL mismatch errors
+    if (err.message?.includes('redirect_uri_mismatch')) {
+      console.error('OAuth callback URL mismatch. Please ensure the callback URL in Google Cloud Console matches: https://prompt-manager.repl.co/auth/google/callback');
+      return res.status(401).json({ 
+        message: 'Authentication configuration error. Please contact support.' 
+      });
+    }
     if (err.name === 'AuthenticationError') {
       return res.status(401).json({ message: 'Authentication failed' });
     }
@@ -51,7 +58,9 @@ export function setupAuth(app: Express) {
       {
         clientID: process.env.GOOGLE_CLIENT_ID!,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-        callbackURL: `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co/auth/google/callback`,
+        // IMPORTANT: This callback URL must exactly match what's configured in the Google Cloud Console
+        // If you change this URL, make sure to update it in the Google Cloud Console as well
+        callbackURL: "https://prompt-manager.repl.co/auth/google/callback",
       },
       async (accessToken, refreshToken, profile, done) => {
         try {

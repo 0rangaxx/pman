@@ -30,7 +30,9 @@ export function PromptPanel() {
   const availableTags = useMemo(() => {
     const tagSet = new Set<string>();
     prompts?.forEach((prompt) => {
-      prompt.tags?.forEach((tag) => tagSet.add(tag));
+      if (Array.isArray(prompt.tags)) {
+        prompt.tags.forEach((tag) => tagSet.add(tag));
+      }
     });
     return Array.from(tagSet).sort();
   }, [prompts]);
@@ -43,7 +45,7 @@ export function PromptPanel() {
 
     // Filter by selected tags
     if (searchCriteria.selectedTags.length > 0) {
-      const promptTags = prompt.tags || [];
+      const promptTags = Array.isArray(prompt.tags) ? prompt.tags : [];
       if (!searchCriteria.selectedTags.every((tag) => promptTags.includes(tag))) {
         return false;
       }
@@ -78,7 +80,7 @@ export function PromptPanel() {
       case "content":
         return matchText(prompt.content);
       case "tags":
-        return prompt.tags?.some(tag => matchText(tag));
+        return Array.isArray(prompt.tags) && prompt.tags.some(tag => matchText(tag));
       case "metadata":
         return Object.entries(prompt.metadata || {}).some(
           ([key, value]) => matchText(key) || matchText(value.toString())
@@ -88,7 +90,7 @@ export function PromptPanel() {
         return (
           matchText(prompt.title) ||
           matchText(prompt.content) ||
-          prompt.tags?.some(tag => matchText(tag)) ||
+          (Array.isArray(prompt.tags) && prompt.tags.some(tag => matchText(tag))) ||
           Object.entries(prompt.metadata || {}).some(
             ([key, value]) => matchText(key) || matchText(value.toString())
           )
@@ -104,6 +106,16 @@ export function PromptPanel() {
   const handleCloseEditor = () => {
     setSelectedPrompt(null);
     setIsCreating(false);
+  };
+
+  const handleTagClick = (tag: string, e: React.MouseEvent) => {
+    e.stopPropagation();  // Prevent prompt selection
+    setSearchCriteria(prev => ({
+      ...prev,
+      selectedTags: prev.selectedTags.includes(tag)
+        ? prev.selectedTags
+        : [...prev.selectedTags, tag]
+    }));
   };
 
   return (
@@ -175,10 +187,15 @@ export function PromptPanel() {
                         {prompt.isLiked && <Heart className="h-4 w-4 text-red-500" />}
                         {prompt.isNsfw && <ShieldAlert className="h-4 w-4 text-yellow-500" />}
                       </div>
-                      {prompt.tags && prompt.tags.length > 0 && (
+                      {Array.isArray(prompt.tags) && prompt.tags.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-1">
                           {prompt.tags.map((tag) => (
-                            <Badge key={tag} variant="secondary" className="text-xs">
+                            <Badge 
+                              key={tag} 
+                              variant="secondary" 
+                              className="text-xs cursor-pointer hover:bg-secondary/80"
+                              onClick={(e) => handleTagClick(tag, e)}
+                            >
                               {tag}
                             </Badge>
                           ))}

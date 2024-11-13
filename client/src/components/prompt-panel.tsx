@@ -172,7 +172,7 @@ export function PromptPanel() {
               </div>
             </div>
 
-            <ScrollArea className="flex-1 mt-4">
+            <ScrollArea className="flex-1 mt-4" key={`${prompts?.length}-${showLikedOnly}-${showNsfwOnly}-${searchCriteria.query}`}>
               {isLoading ? (
                 <div className="flex items-center justify-center p-4">
                   <Loader2 className="h-6 w-6 animate-spin" />
@@ -183,7 +183,7 @@ export function PromptPanel() {
                 </div>
               ) : (
                 filteredPrompts?.map((prompt) => (
-                  <div key={prompt.id} className="mb-2">
+                  <div key={`${prompt.id}-${prompt.updatedAt}`} className="mb-2">
                     <Button
                       variant={selectedPrompt?.id === prompt.id ? "default" : "ghost"}
                       className="w-full justify-start flex-col items-start p-4 h-auto"
@@ -227,7 +227,7 @@ export function PromptPanel() {
           <div className="h-full p-4">
             {(selectedPrompt || isCreating) && (
               <PromptEditor
-                key={selectedPrompt?.id || 'new'} // Add key to force re-render on prompt change
+                key={selectedPrompt?.id || 'new'}
                 prompt={selectedPrompt}
                 onClose={handleCloseEditor}
                 setSelectedPrompt={setSelectedPrompt}

@@ -8,13 +8,13 @@ export function usePrompts() {
   const createPrompt = useCallback(async (prompt: Omit<Prompt, "id">) => {
     try {
       console.log('Creating prompt:', prompt);
-      const newPrompt = {
+      const newPrompt: Prompt = {
         ...prompt,
         id: Date.now(),
         createdAt: new Date(),
         updatedAt: new Date(),
-        tags: prompt.tags || [],
-        metadata: prompt.metadata || {},
+        tags: prompt.tags ?? [],
+        metadata: prompt.metadata ?? {},
       };
       
       setPrompts((currentPrompts) => {
@@ -36,22 +36,24 @@ export function usePrompts() {
       let updatedPrompt: Prompt;
       
       setPrompts((currentPrompts) => {
-        const index = currentPrompts.findIndex((p) => p.id === id);
+        const newPrompts = [...currentPrompts];
+        const index = newPrompts.findIndex((p) => p.id === id);
         if (index === -1) {
           console.error('Prompt not found:', id);
           throw new Error("Prompt not found");
         }
 
-        const updatedPrompts = [...currentPrompts];
         updatedPrompt = {
-          ...updatedPrompts[index],
+          ...newPrompts[index],
           ...promptUpdate,
           updatedAt: new Date(),
+          tags: promptUpdate.tags ?? newPrompts[index].tags ?? [],
+          metadata: promptUpdate.metadata ?? newPrompts[index].metadata ?? {},
         };
-        updatedPrompts[index] = updatedPrompt;
+        newPrompts[index] = updatedPrompt;
         
-        console.log('Updated prompts:', updatedPrompts);
-        return updatedPrompts;
+        console.log('Updated prompts:', newPrompts);
+        return newPrompts;
       });
       
       return updatedPrompt!;
@@ -66,9 +68,9 @@ export function usePrompts() {
       console.log('Deleting prompt:', id);
       setPrompts((currentPrompts) => {
         console.log('Current prompts:', currentPrompts);
-        const filteredPrompts = currentPrompts.filter((prompt) => prompt.id !== id);
-        console.log('Remaining prompts:', filteredPrompts);
-        return filteredPrompts;
+        const newPrompts = currentPrompts.filter((prompt) => prompt.id !== id);
+        console.log('Remaining prompts:', newPrompts);
+        return newPrompts;
       });
     } catch (error) {
       console.error('Error deleting prompt:', error);

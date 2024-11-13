@@ -111,7 +111,7 @@ export function PromptPanel() {
     console.log('Closing editor, refreshing list');
     setSelectedPrompt(null);
     setIsCreating(false);
-    refreshPrompts(); // Force refresh when editor closes
+    refreshPrompts();
   }, [refreshPrompts]);
 
   const handleTagClick = useCallback((tag: string, e: React.MouseEvent) => {
@@ -125,6 +125,7 @@ export function PromptPanel() {
   }, []);
 
   const handlePromptSelect = useCallback((prompt: Prompt) => {
+    console.log('Selecting prompt:', prompt.id);
     setSelectedPrompt(prompt);
     setIsCreating(false);
   }, []);
@@ -175,7 +176,7 @@ export function PromptPanel() {
 
             <ScrollArea 
               className="flex-1 mt-4" 
-              key={`${prompts?.length}-${showLikedOnly}-${showNsfwOnly}-${searchCriteria.query}-${Date.now()}`}
+              key={`${prompts?.length}-${showLikedOnly}-${showNsfwOnly}-${searchCriteria.query}`}
             >
               {isLoading ? (
                 <div className="flex items-center justify-center p-4">
@@ -187,7 +188,7 @@ export function PromptPanel() {
                 </div>
               ) : (
                 filteredPrompts?.map((prompt) => (
-                  <div key={`${prompt.id}-${prompt.updatedAt}`} className="mb-2">
+                  <div key={prompt.id} className="mb-2">
                     <Button
                       variant={selectedPrompt?.id === prompt.id ? "default" : "ghost"}
                       className="w-full justify-start flex-col items-start p-4 h-auto"

@@ -1,63 +1,62 @@
-import useSWR from "swr";
+import { useCallback } from "react";
+import { useLocalStorage } from "./use-local-storage";
 import type { Prompt } from "db/schema";
 
 export function usePrompts() {
-  const { data: prompts, error, mutate } = useSWR<Prompt[]>("/api/prompts");
-
-  const handleRequest = async (
-    url: string,
-    method: string,
-    body?: any
-  ): Promise<any> => {
-    const response = await fetch(url, {
-      method,
-      headers: body ? { "Content-Type": "application/json" } : undefined,
-      body: body ? JSON.stringify(body) : undefined,
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || "An error occurred");
-    }
-
-    return response.json();
-  };
-
-  const createPrompt = async (prompt: Omit<Prompt, "id">) => {
+  const [prompts, setPrompts] = useLocalStorage<Prompt[]>("prompts", []);
+  
+  const createPrompt = useCallback(async (prompt: Omit<Prompt, "id">) => {
     try {
-      await handleRequest("/api/prompts", "POST", prompt);
-      await mutate();
+      const newPrompt = {
+        ...prompt,
+        id: Date.now(), // Use timestamp as a simple unique id
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      setPrompts((currentPrompts) => [...currentPrompts, newPrompt]);
+      return newPrompt;
     } catch (error) {
       console.error('Error creating prompt:', error);
       throw error;
     }
-  };
+  }, [setPrompts]);
 
-  const updatePrompt = async (id: number, prompt: Partial<Prompt>) => {
+  const updatePrompt = useCallback(async (id: number, promptUpdate: Partial<Prompt>) => {
     try {
-      await handleRequest(`/api/prompts/${id}`, "PUT", prompt);
-      await mutate();  // Force refresh after update
+      setPrompts((currentPrompts) => {
+        const index = currentPrompts.findIndex((p) => p.id === id);
+        if (index === -1) return currentPrompts;
+
+        const updatedPrompts = [...currentPrompts];
+        updatedPrompts[index] = {
+          ...updatedPrompts[index],
+          ...promptUpdate,
+          updatedAt: new Date().toISOString(),
+        };
+        return updatedPrompts;
+      });
     } catch (error) {
       console.error('Error updating prompt:', error);
       throw error;
     }
-  };
+  }, [setPrompts]);
 
-  const deletePrompt = async (id: number) => {
+  const deletePrompt = useCallback(async (id: number) => {
     try {
-      await handleRequest(`/api/prompts/${id}`, "DELETE");
-      await mutate();
+      setPrompts((currentPrompts) => 
+        currentPrompts.filter((prompt) => prompt.id !== id)
+      );
     } catch (error) {
       console.error('Error deleting prompt:', error);
       throw error;
     }
-  };
+  }, [setPrompts]);
 
   return {
     prompts,
-    isLoading: !error && !prompts,
-    isError: error,
-    error: error?.message,
+    isLoading: false, // Local storage is synchronous
+    isError: false,
+    error: null,
     createPrompt,
     updatePrompt,
     deletePrompt,

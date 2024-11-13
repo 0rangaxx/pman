@@ -108,6 +108,7 @@ export function PromptPanel() {
   }, []);
 
   const handleCloseEditor = useCallback(() => {
+    console.log('Closing editor, refreshing list');
     setSelectedPrompt(null);
     setIsCreating(false);
   }, []);

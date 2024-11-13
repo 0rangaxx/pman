@@ -141,21 +141,28 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
   const onSubmit = async (values: any) => {
     try {
       setIsSubmitting(true);
+      console.log('Submitting form values:', values);
+      
       if (prompt) {
         const updateData = {
           ...values,
           tags: values.tags || [],
           metadata: values.metadata || {},
         };
+        console.log('Updating prompt:', updateData);
         const updatedPrompt = await updatePrompt(prompt.id, updateData);
+        console.log('Update successful:', updatedPrompt);
         toast({ title: "Prompt updated successfully" });
         setSelectedPrompt(updatedPrompt);
       } else {
+        console.log('Creating new prompt');
         const newPrompt = await createPrompt(values);
+        console.log('Creation successful:', newPrompt);
         toast({ title: "Prompt created successfully" });
         onClose();
       }
     } catch (error) {
+      console.error('Form submission error:', error);
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Something went wrong",

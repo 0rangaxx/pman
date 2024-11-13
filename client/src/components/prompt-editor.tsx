@@ -151,7 +151,8 @@ export function PromptEditor({ prompt, onClose }: PromptEditorProps) {
         console.log('Update successful');
         toast({ title: "Prompt updated successfully" });
       } else {
-        await createPrompt(values);
+        const newPrompt = await createPrompt(values);
+        console.log('Created prompt:', newPrompt);
         toast({ title: "Prompt created successfully" });
       }
       onClose();

@@ -54,7 +54,7 @@ export function PromptPanel() {
 
     // Filter by date range
     if (searchCriteria.dateRange?.from && searchCriteria.dateRange?.to) {
-      const promptDate = parseISO(prompt.createdAt?.toString() || "");
+      const promptDate = prompt.createdAt ? new Date(prompt.createdAt) : new Date();
       if (!isWithinInterval(promptDate, {
         start: searchCriteria.dateRange.from,
         end: searchCriteria.dateRange.to,
@@ -179,7 +179,9 @@ export function PromptPanel() {
                       variant={selectedPrompt?.id === prompt.id ? "default" : "ghost"}
                       className="w-full justify-start flex-col items-start p-4 h-auto"
                       onClick={() => {
-                        setSelectedPrompt(prompt);
+                        // Force a fresh load of the prompt data
+                        const freshPrompt = prompts.find(p => p.id === prompt.id);
+                        setSelectedPrompt(freshPrompt || null);
                         setIsCreating(false);
                       }}
                     >

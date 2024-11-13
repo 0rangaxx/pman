@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
@@ -19,10 +19,21 @@ export function PromptPanel() {
     query: "",
     field: "all",
     dateRange: undefined,
+    caseSensitive: false,
+    selectedTags: [],
   });
   const [isCreating, setIsCreating] = useState(false);
   const [showLikedOnly, setShowLikedOnly] = useState(false);
   const [showNsfwOnly, setShowNsfwOnly] = useState(false);
+
+  // Get unique tags from all prompts
+  const availableTags = useMemo(() => {
+    const tagSet = new Set<string>();
+    prompts?.forEach((prompt) => {
+      prompt.tags?.forEach((tag) => tagSet.add(tag));
+    });
+    return Array.from(tagSet).sort();
+  }, [prompts]);
 
   const filteredPrompts = prompts?.filter((prompt) => {
     // Filter by liked/nsfw status
@@ -30,9 +41,17 @@ export function PromptPanel() {
       return false;
     }
 
+    // Filter by selected tags
+    if (searchCriteria.selectedTags.length > 0) {
+      const promptTags = prompt.tags || [];
+      if (!searchCriteria.selectedTags.every((tag) => promptTags.includes(tag))) {
+        return false;
+      }
+    }
+
     // Filter by date range
     if (searchCriteria.dateRange?.from && searchCriteria.dateRange?.to) {
-      const promptDate = parseISO(prompt.createdAt.toString());
+      const promptDate = parseISO(prompt.createdAt?.toString() || "");
       if (!isWithinInterval(promptDate, {
         start: searchCriteria.dateRange.from,
         end: searchCriteria.dateRange.to,
@@ -44,23 +63,35 @@ export function PromptPanel() {
     // Filter by search query and field
     if (!searchCriteria.query) return true;
     
-    const query = searchCriteria.query.toLowerCase();
+    const query = searchCriteria.caseSensitive 
+      ? searchCriteria.query 
+      : searchCriteria.query.toLowerCase();
+
+    const matchText = (text: string) => {
+      const searchText = searchCriteria.caseSensitive ? text : text.toLowerCase();
+      return searchText.includes(query);
+    };
     
     switch (searchCriteria.field) {
       case "title":
-        return prompt.title.toLowerCase().includes(query);
+        return matchText(prompt.title);
       case "content":
-        return prompt.content.toLowerCase().includes(query);
+        return matchText(prompt.content);
       case "tags":
-        return prompt.tags?.some(tag => 
-          tag.toLowerCase().includes(query)
+        return prompt.tags?.some(tag => matchText(tag));
+      case "metadata":
+        return Object.entries(prompt.metadata || {}).some(
+          ([key, value]) => matchText(key) || matchText(value.toString())
         );
       case "all":
       default:
         return (
-          prompt.title.toLowerCase().includes(query) ||
-          prompt.content.toLowerCase().includes(query) ||
-          prompt.tags?.some(tag => tag.toLowerCase().includes(query))
+          matchText(prompt.title) ||
+          matchText(prompt.content) ||
+          prompt.tags?.some(tag => matchText(tag)) ||
+          Object.entries(prompt.metadata || {}).some(
+            ([key, value]) => matchText(key) || matchText(value.toString())
+          )
         );
     }
   });
@@ -84,7 +115,8 @@ export function PromptPanel() {
               <div className="flex items-center gap-2">
                 <SearchBar 
                   criteria={searchCriteria} 
-                  onCriteriaChange={setSearchCriteria} 
+                  onCriteriaChange={setSearchCriteria}
+                  availableTags={availableTags}
                 />
                 <Button onClick={handleCreateNew} size="icon">
                   <Plus className="h-4 w-4" />

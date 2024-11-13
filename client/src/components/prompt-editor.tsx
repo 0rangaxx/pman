@@ -62,7 +62,7 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
       form.reset({
         title: prompt.title,
         content: prompt.content,
-        tags: prompt.tags || [],
+        tags: Array.isArray(prompt.tags) ? prompt.tags : [],
         metadata: prompt.metadata || {},
         isLiked: prompt.isLiked || false,
         isNsfw: prompt.isNsfw || false,
@@ -142,7 +142,6 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
     try {
       setIsSubmitting(true);
       if (prompt) {
-        console.log('Updating prompt:', { id: prompt.id, values });
         const updateData = {
           ...values,
           tags: values.tags || [],
@@ -151,13 +150,16 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
         const updatedPrompt = await updatePrompt(prompt.id, updateData);
         console.log('Update successful:', updatedPrompt);
         toast({ title: "Prompt updated successfully" });
-        setSelectedPrompt(updatedPrompt || null);
+        // Clear the form and selected prompt
+        form.reset(defaultValues);
+        setSelectedPrompt(null);
+        onClose();
       } else {
         const newPrompt = await createPrompt(values);
         console.log('Created prompt:', newPrompt);
         toast({ title: "Prompt created successfully" });
+        onClose();
       }
-      onClose();
     } catch (error) {
       console.error('Form submission error:', error);
       toast({

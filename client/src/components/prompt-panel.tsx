@@ -223,6 +223,7 @@ export function PromptPanel() {
               <PromptEditor
                 prompt={selectedPrompt}
                 onClose={handleCloseEditor}
+                setSelectedPrompt={setSelectedPrompt}
               />
             )}
           </div>

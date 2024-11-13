@@ -30,6 +30,7 @@ import { Label } from "@/components/ui/label";
 interface PromptEditorProps {
   prompt: Prompt | null;
   onClose: () => void;
+  setSelectedPrompt: (prompt: Prompt | null) => void;
 }
 
 const defaultValues = {
@@ -41,7 +42,7 @@ const defaultValues = {
   isNsfw: false,
 };
 
-export function PromptEditor({ prompt, onClose }: PromptEditorProps) {
+export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEditorProps) {
   const { createPrompt, updatePrompt, deletePrompt } = usePrompts();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -147,9 +148,10 @@ export function PromptEditor({ prompt, onClose }: PromptEditorProps) {
           tags: values.tags || [],
           metadata: values.metadata || {},
         };
-        await updatePrompt(prompt.id, updateData);
-        console.log('Update successful');
+        const updatedPrompt = await updatePrompt(prompt.id, updateData);
+        console.log('Update successful:', updatedPrompt);
         toast({ title: "Prompt updated successfully" });
+        setSelectedPrompt(updatedPrompt || null);
       } else {
         const newPrompt = await createPrompt(values);
         console.log('Created prompt:', newPrompt);

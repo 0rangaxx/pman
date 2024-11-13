@@ -35,8 +35,8 @@ interface PromptEditorProps {
 const defaultValues = {
   title: "",
   content: "",
-  tags: [],
-  metadata: {},
+  tags: [] as string[],
+  metadata: {} as Record<string, string>,
   isLiked: false,
   isNsfw: false,
 };
@@ -52,11 +52,23 @@ export function PromptEditor({ prompt, onClose }: PromptEditorProps) {
 
   const form = useForm({
     resolver: zodResolver(insertPromptSchema),
-    defaultValues: prompt || defaultValues,
+    defaultValues: defaultValues,
   });
 
   useEffect(() => {
-    form.reset(prompt || defaultValues);
+    if (prompt) {
+      console.log('Resetting form with prompt:', prompt);
+      form.reset({
+        title: prompt.title,
+        content: prompt.content,
+        tags: prompt.tags || [],
+        metadata: prompt.metadata || {},
+        isLiked: prompt.isLiked || false,
+        isNsfw: prompt.isNsfw || false,
+      });
+    } else {
+      form.reset(defaultValues);
+    }
   }, [prompt, form]);
 
   const tags = form.watch("tags") || [];
@@ -129,12 +141,14 @@ export function PromptEditor({ prompt, onClose }: PromptEditorProps) {
     try {
       setIsSubmitting(true);
       if (prompt) {
+        console.log('Updating prompt:', { id: prompt.id, values });
         const updateData = {
           ...values,
           tags: values.tags || [],
           metadata: values.metadata || {},
         };
         await updatePrompt(prompt.id, updateData);
+        console.log('Update successful');
         toast({ title: "Prompt updated successfully" });
       } else {
         await createPrompt(values);
@@ -152,6 +166,11 @@ export function PromptEditor({ prompt, onClose }: PromptEditorProps) {
       setIsSubmitting(false);
     }
   };
+
+  const handleSubmit = form.handleSubmit((values) => {
+    console.log('Form values before submission:', values);
+    return onSubmit(values);
+  });
 
   const handleDelete = async () => {
     if (!prompt) return;
@@ -177,7 +196,7 @@ export function PromptEditor({ prompt, onClose }: PromptEditorProps) {
         <CardTitle>{prompt ? "Edit Prompt" : "Create New Prompt"}</CardTitle>
       </CardHeader>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)}>
+        <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
             <FormField
               control={form.control}
@@ -237,7 +256,7 @@ export function PromptEditor({ prompt, onClose }: PromptEditorProps) {
                 render={({ field }) => (
                   <div className="flex items-center space-x-2">
                     <Switch
-                      checked={field.value}
+                      checked={field.value || false}
                       onCheckedChange={field.onChange}
                       id="isLiked"
                     />
@@ -255,7 +274,7 @@ export function PromptEditor({ prompt, onClose }: PromptEditorProps) {
                 render={({ field }) => (
                   <div className="flex items-center space-x-2">
                     <Switch
-                      checked={field.value}
+                      checked={field.value || false}
                       onCheckedChange={field.onChange}
                       id="isNsfw"
                     />
@@ -271,7 +290,7 @@ export function PromptEditor({ prompt, onClose }: PromptEditorProps) {
             <FormItem>
               <FormLabel>Tags</FormLabel>
               <div className="flex flex-wrap gap-2 mb-2">
-                {tags.map((tag) => (
+                {tags.map((tag: string) => (
                   <Badge key={tag} variant="secondary">
                     {tag}
                     <Button

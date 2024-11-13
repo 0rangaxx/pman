@@ -24,18 +24,33 @@ export function usePrompts() {
   };
 
   const createPrompt = async (prompt: Omit<Prompt, "id">) => {
-    await handleRequest("/api/prompts", "POST", prompt);
-    mutate();
+    try {
+      await handleRequest("/api/prompts", "POST", prompt);
+      await mutate();
+    } catch (error) {
+      console.error('Error creating prompt:', error);
+      throw error;
+    }
   };
 
   const updatePrompt = async (id: number, prompt: Partial<Prompt>) => {
-    await handleRequest(`/api/prompts/${id}`, "PUT", prompt);
-    mutate();
+    try {
+      await handleRequest(`/api/prompts/${id}`, "PUT", prompt);
+      await mutate();  // Force refresh after update
+    } catch (error) {
+      console.error('Error updating prompt:', error);
+      throw error;
+    }
   };
 
   const deletePrompt = async (id: number) => {
-    await handleRequest(`/api/prompts/${id}`, "DELETE");
-    mutate();
+    try {
+      await handleRequest(`/api/prompts/${id}`, "DELETE");
+      await mutate();
+    } catch (error) {
+      console.error('Error deleting prompt:', error);
+      throw error;
+    }
   };
 
   return {

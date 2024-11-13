@@ -21,17 +21,30 @@ export function registerRoutes(app: Express) {
   });
 
   app.put("/api/prompts/:id", async (req, res) => {
-    const result = insertPromptSchema.safeParse(req.body);
-    if (!result.success) {
-      return res.status(400).json({ errors: result.error.flatten() });
-    }
+    try {
+      const result = insertPromptSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ errors: result.error.flatten() });
+      }
 
-    const [prompt] = await db
-      .update(prompts)
-      .set(result.data)
-      .where(eq(prompts.id, parseInt(req.params.id)))
-      .returning();
-    res.json(prompt);
+      const [prompt] = await db
+        .update(prompts)
+        .set({
+          ...result.data,
+          updatedAt: new Date(),
+        })
+        .where(eq(prompts.id, parseInt(req.params.id)))
+        .returning();
+
+      if (!prompt) {
+        return res.status(404).json({ error: "Prompt not found" });
+      }
+
+      res.json(prompt);
+    } catch (error) {
+      console.error('Error updating prompt:', error);
+      res.status(500).json({ error: 'Failed to update prompt' });
+    }
   });
 
   app.delete("/api/prompts/:id", async (req, res) => {

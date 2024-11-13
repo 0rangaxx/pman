@@ -4,21 +4,29 @@ import type { Prompt } from "db/schema";
 
 export function usePrompts() {
   const [prompts, setPrompts] = useLocalStorage<Prompt[]>("prompts", []);
-  const [version, setVersion] = useState(0); // Add version for forced updates
+  const [version, setVersion] = useState(0);
 
   const refreshPrompts = useCallback(() => {
     console.log('Forcing prompts refresh');
     setVersion(v => v + 1);
   }, []);
 
-  // Force re-fetch when version changes
+  // Force re-fetch when version changes, but avoid infinite loops
   useEffect(() => {
     const stored = window.localStorage.getItem("prompts");
     if (stored) {
-      console.log('Refreshing prompts from storage');
-      setPrompts(JSON.parse(stored));
+      try {
+        const parsedPrompts = JSON.parse(stored);
+        // Only update if the stored data is different
+        if (JSON.stringify(parsedPrompts) !== JSON.stringify(prompts)) {
+          console.log('Refreshing prompts from storage');
+          setPrompts(parsedPrompts);
+        }
+      } catch (error) {
+        console.error('Error parsing stored prompts:', error);
+      }
     }
-  }, [version, setPrompts]);
+  }, [version, setPrompts]); // Remove prompts from dependency array to prevent infinite loops
 
   const createPrompt = useCallback(async (prompt: Omit<Prompt, "id">) => {
     try {
@@ -28,7 +36,7 @@ export function usePrompts() {
         id: Date.now(),
         createdAt: new Date(),
         updatedAt: new Date(),
-        tags: prompt.tags ?? null,
+        tags: prompt.tags ?? [],
         metadata: prompt.metadata ?? {},
       };
       
@@ -38,7 +46,7 @@ export function usePrompts() {
         return [...currentPrompts, newPrompt];
       });
       
-      refreshPrompts(); // Force refresh after create
+      refreshPrompts();
       return newPrompt;
     } catch (error) {
       console.error('Error creating prompt:', error);
@@ -63,7 +71,7 @@ export function usePrompts() {
           ...newPrompts[index],
           ...promptUpdate,
           updatedAt: new Date(),
-          tags: promptUpdate.tags ?? newPrompts[index].tags ?? null,
+          tags: promptUpdate.tags ?? newPrompts[index].tags ?? [],
           metadata: promptUpdate.metadata ?? newPrompts[index].metadata ?? {},
         };
         newPrompts[index] = updatedPrompt;
@@ -72,7 +80,7 @@ export function usePrompts() {
         return newPrompts;
       });
       
-      refreshPrompts(); // Force refresh after update
+      refreshPrompts();
       return updatedPrompt!;
     } catch (error) {
       console.error('Error updating prompt:', error);
@@ -89,7 +97,7 @@ export function usePrompts() {
         console.log('Remaining prompts:', newPrompts);
         return newPrompts;
       });
-      refreshPrompts(); // Force refresh after delete
+      refreshPrompts();
     } catch (error) {
       console.error('Error deleting prompt:', error);
       throw error;
@@ -104,6 +112,6 @@ export function usePrompts() {
     createPrompt,
     updatePrompt,
     deletePrompt,
-    refreshPrompts, // Export refresh function
+    refreshPrompts,
   };
 }

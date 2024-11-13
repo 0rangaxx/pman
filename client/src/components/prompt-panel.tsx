@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
@@ -38,86 +38,94 @@ export function PromptPanel() {
     return Array.from(tagSet).sort();
   }, [prompts]);
 
-  const filteredPrompts = prompts?.filter((prompt) => {
-    // Filter by liked/nsfw status
-    if ((showLikedOnly && !prompt.isLiked) || (showNsfwOnly && !prompt.isNsfw)) {
-      return false;
-    }
-
-    // Filter by selected tags
-    if (searchCriteria.selectedTags.length > 0) {
-      const promptTags = Array.isArray(prompt.tags) ? prompt.tags : [];
-      if (!searchCriteria.selectedTags.every((tag) => promptTags.includes(tag))) {
+  // Memoize filtered prompts
+  const filteredPrompts = useMemo(() => {
+    return prompts?.filter((prompt) => {
+      // Filter by liked/nsfw status
+      if ((showLikedOnly && !prompt.isLiked) || (showNsfwOnly && !prompt.isNsfw)) {
         return false;
       }
-    }
 
-    // Filter by date range
-    if (searchCriteria.dateRange?.from && searchCriteria.dateRange?.to) {
-      const promptDate = prompt.createdAt ? new Date(prompt.createdAt) : new Date();
-      if (!isWithinInterval(promptDate, {
-        start: searchCriteria.dateRange.from,
-        end: searchCriteria.dateRange.to,
-      })) {
-        return false;
+      // Filter by selected tags
+      if (searchCriteria.selectedTags.length > 0) {
+        const promptTags = Array.isArray(prompt.tags) ? prompt.tags : [];
+        if (!searchCriteria.selectedTags.every((tag) => promptTags.includes(tag))) {
+          return false;
+        }
       }
-    }
 
-    // Filter by search query and field
-    if (!searchCriteria.query) return true;
-    
-    const query = searchCriteria.caseSensitive 
-      ? searchCriteria.query 
-      : searchCriteria.query.toLowerCase();
+      // Filter by date range
+      if (searchCriteria.dateRange?.from && searchCriteria.dateRange?.to) {
+        const promptDate = prompt.createdAt ? new Date(prompt.createdAt) : new Date();
+        if (!isWithinInterval(promptDate, {
+          start: searchCriteria.dateRange.from,
+          end: searchCriteria.dateRange.to,
+        })) {
+          return false;
+        }
+      }
 
-    const matchText = (text: string) => {
-      const searchText = searchCriteria.caseSensitive ? text : text.toLowerCase();
-      return searchText.includes(query);
-    };
-    
-    switch (searchCriteria.field) {
-      case "title":
-        return matchText(prompt.title);
-      case "content":
-        return matchText(prompt.content);
-      case "tags":
-        return Array.isArray(prompt.tags) && prompt.tags.some(tag => matchText(tag));
-      case "metadata":
-        return Object.entries(prompt.metadata || {}).some(
-          ([key, value]) => matchText(key) || matchText(value.toString())
-        );
-      case "all":
-      default:
-        return (
-          matchText(prompt.title) ||
-          matchText(prompt.content) ||
-          (Array.isArray(prompt.tags) && prompt.tags.some(tag => matchText(tag))) ||
-          Object.entries(prompt.metadata || {}).some(
+      // Filter by search query and field
+      if (!searchCriteria.query) return true;
+      
+      const query = searchCriteria.caseSensitive 
+        ? searchCriteria.query 
+        : searchCriteria.query.toLowerCase();
+
+      const matchText = (text: string) => {
+        const searchText = searchCriteria.caseSensitive ? text : text.toLowerCase();
+        return searchText.includes(query);
+      };
+      
+      switch (searchCriteria.field) {
+        case "title":
+          return matchText(prompt.title);
+        case "content":
+          return matchText(prompt.content);
+        case "tags":
+          return Array.isArray(prompt.tags) && prompt.tags.some(tag => matchText(tag));
+        case "metadata":
+          return Object.entries(prompt.metadata || {}).some(
             ([key, value]) => matchText(key) || matchText(value.toString())
-          )
-        );
-    }
-  });
+          );
+        case "all":
+        default:
+          return (
+            matchText(prompt.title) ||
+            matchText(prompt.content) ||
+            (Array.isArray(prompt.tags) && prompt.tags.some(tag => matchText(tag))) ||
+            Object.entries(prompt.metadata || {}).some(
+              ([key, value]) => matchText(key) || matchText(value.toString())
+            )
+          );
+      }
+    });
+  }, [prompts, searchCriteria, showLikedOnly, showNsfwOnly]);
 
-  const handleCreateNew = () => {
+  const handleCreateNew = useCallback(() => {
     setSelectedPrompt(null);
     setIsCreating(true);
-  };
+  }, []);
 
-  const handleCloseEditor = () => {
+  const handleCloseEditor = useCallback(() => {
     setSelectedPrompt(null);
     setIsCreating(false);
-  };
+  }, []);
 
-  const handleTagClick = (tag: string, e: React.MouseEvent) => {
-    e.stopPropagation();  // Prevent prompt selection
+  const handleTagClick = useCallback((tag: string, e: React.MouseEvent) => {
+    e.stopPropagation();
     setSearchCriteria(prev => ({
       ...prev,
       selectedTags: prev.selectedTags.includes(tag)
-        ? prev.selectedTags.filter(t => t !== tag)  // Remove tag if already selected
-        : [...prev.selectedTags, tag]  // Add tag if not selected
+        ? prev.selectedTags.filter(t => t !== tag)
+        : [...prev.selectedTags, tag]
     }));
-  };
+  }, []);
+
+  const handlePromptSelect = useCallback((prompt: Prompt) => {
+    setSelectedPrompt(prompt);
+    setIsCreating(false);
+  }, []);
 
   return (
     <div className="h-full">
@@ -178,10 +186,7 @@ export function PromptPanel() {
                     <Button
                       variant={selectedPrompt?.id === prompt.id ? "default" : "ghost"}
                       className="w-full justify-start flex-col items-start p-4 h-auto"
-                      onClick={() => {
-                        setSelectedPrompt(prompt);  // Use the current prompt from the filtered list
-                        setIsCreating(false);
-                      }}
+                      onClick={() => handlePromptSelect(prompt)}
                     >
                       <div className="font-medium flex items-center gap-2">
                         {prompt.title}
@@ -221,6 +226,7 @@ export function PromptPanel() {
           <div className="h-full p-4">
             {(selectedPrompt || isCreating) && (
               <PromptEditor
+                key={selectedPrompt?.id || 'new'} // Add key to force re-render on prompt change
                 prompt={selectedPrompt}
                 onClose={handleCloseEditor}
                 setSelectedPrompt={setSelectedPrompt}

@@ -9,11 +9,19 @@ export function usePrompts() {
     try {
       const newPrompt = {
         ...prompt,
-        id: Date.now(), // Use timestamp as a simple unique id
+        id: Date.now(),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
+        tags: prompt.tags || [],
+        metadata: prompt.metadata || {},
       };
-      setPrompts((currentPrompts) => [...currentPrompts, newPrompt]);
+      
+      // Ensure we're getting the latest state
+      setPrompts((currentPrompts) => {
+        console.log('Creating new prompt:', newPrompt);
+        return [...currentPrompts, newPrompt];
+      });
+      
       return newPrompt;
     } catch (error) {
       console.error('Error creating prompt:', error);

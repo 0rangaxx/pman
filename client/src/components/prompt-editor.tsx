@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertPromptSchema, type Prompt } from "db/schema";
@@ -16,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { usePrompts } from "../hooks/use-prompts";
 import { Badge } from "@/components/ui/badge";
-import { X, Plus, Loader2 } from "lucide-react";
+import { X, Plus, Loader2, Wand2 } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -30,6 +30,13 @@ interface PromptEditorProps {
   onClose: () => void;
 }
 
+const defaultValues = {
+  title: "",
+  content: "",
+  tags: [],
+  metadata: {},
+};
+
 export function PromptEditor({ prompt, onClose }: PromptEditorProps) {
   const { createPrompt, updatePrompt, deletePrompt } = usePrompts();
   const { toast } = useToast();
@@ -37,16 +44,16 @@ export function PromptEditor({ prompt, onClose }: PromptEditorProps) {
   const [newTag, setNewTag] = useState("");
   const [newMetadataKey, setNewMetadataKey] = useState("");
   const [newMetadataValue, setNewMetadataValue] = useState("");
+  const [isFormatting, setIsFormatting] = useState(false);
 
   const form = useForm({
     resolver: zodResolver(insertPromptSchema),
-    defaultValues: prompt || {
-      title: "",
-      content: "",
-      tags: [],
-      metadata: {},
-    },
+    defaultValues: prompt || defaultValues,
   });
+
+  useEffect(() => {
+    form.reset(prompt || defaultValues);
+  }, [prompt, form]);
 
   const tags = form.watch("tags") || [];
   const metadata = form.watch("metadata") || {};
@@ -82,6 +89,23 @@ export function PromptEditor({ prompt, onClose }: PromptEditorProps) {
   const handleRemoveMetadata = (key: string) => {
     const { [key]: _, ...rest } = metadata;
     form.setValue("metadata", rest);
+  };
+
+  const handleFormatContent = () => {
+    setIsFormatting(true);
+    const content = form.getValues("content");
+    const formatted = content
+      .replace(/,(?!\s)/g, ", ") // Add space after commas if missing
+      .replace(/_/g, " "); // Replace underscores with spaces
+    
+    form.setValue("content", formatted);
+    
+    toast({
+      title: "Content formatted",
+      description: "Applied formatting rules to the content.",
+    });
+    
+    setIsFormatting(false);
   };
 
   const onSubmit = async (values: any) => {
@@ -152,9 +176,21 @@ export function PromptEditor({ prompt, onClose }: PromptEditorProps) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Content</FormLabel>
-                  <FormControl>
-                    <Textarea {...field} className="min-h-[200px]" />
-                  </FormControl>
+                  <div className="flex gap-2">
+                    <FormControl className="flex-1">
+                      <Textarea {...field} className="min-h-[200px]" />
+                    </FormControl>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={handleFormatContent}
+                      disabled={isFormatting}
+                      className="self-start"
+                    >
+                      <Wand2 className={`h-4 w-4 ${isFormatting ? 'animate-spin' : ''}`} />
+                    </Button>
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}

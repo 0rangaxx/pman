@@ -1,4 +1,4 @@
-import { pgTable, text, integer, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, timestamp, jsonb, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -8,6 +8,8 @@ export const prompts = pgTable("prompts", {
   content: text("content").notNull(),
   tags: text("tags").array(),
   metadata: jsonb("metadata"),
+  isLiked: boolean("is_liked").default(false),
+  isNsfw: boolean("is_nsfw").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

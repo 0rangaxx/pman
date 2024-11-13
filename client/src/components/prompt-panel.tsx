@@ -6,22 +6,28 @@ import { usePrompts } from "../hooks/use-prompts";
 import { PromptEditor } from "./prompt-editor";
 import { SearchBar } from "./search-bar";
 import type { Prompt } from "db/schema";
-import { Loader2, Plus } from "lucide-react";
+import { Loader2, Plus, Heart, ShieldAlert } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 export function PromptPanel() {
   const { prompts, isLoading } = usePrompts();
   const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+  const [showLikedOnly, setShowLikedOnly] = useState(false);
+  const [showNsfwOnly, setShowNsfwOnly] = useState(false);
 
   const filteredPrompts = prompts?.filter(
     (prompt) =>
-      prompt.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      prompt.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      prompt.tags?.some((tag) =>
-        tag.toLowerCase().includes(searchQuery.toLowerCase())
-      )
+      ((!showLikedOnly || prompt.isLiked) &&
+       (!showNsfwOnly || prompt.isNsfw)) &&
+      (prompt.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+       prompt.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
+       prompt.tags?.some((tag) =>
+         tag.toLowerCase().includes(searchQuery.toLowerCase())
+       ))
   );
 
   const handleCreateNew = () => {
@@ -39,13 +45,42 @@ export function PromptPanel() {
       <PanelGroup direction="horizontal">
         <Panel defaultSize={30} minSize={20}>
           <div className="h-full flex flex-col p-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-            <div className="flex items-center gap-2 mb-4">
-              <SearchBar value={searchQuery} onChange={setSearchQuery} />
-              <Button onClick={handleCreateNew} size="icon">
-                <Plus className="h-4 w-4" />
-              </Button>
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <SearchBar value={searchQuery} onChange={setSearchQuery} />
+                <Button onClick={handleCreateNew} size="icon">
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+              
+              <div className="flex items-center space-x-8">
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="liked"
+                    checked={showLikedOnly}
+                    onCheckedChange={setShowLikedOnly}
+                  />
+                  <Label htmlFor="liked" className="flex items-center gap-2">
+                    <Heart className="h-4 w-4" />
+                    お気に入り
+                  </Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="nsfw"
+                    checked={showNsfwOnly}
+                    onCheckedChange={setShowNsfwOnly}
+                  />
+                  <Label htmlFor="nsfw" className="flex items-center gap-2">
+                    <ShieldAlert className="h-4 w-4" />
+                    NSFW
+                  </Label>
+                </div>
+              </div>
             </div>
-            <ScrollArea className="flex-1">
+
+            <ScrollArea className="flex-1 mt-4">
               {isLoading ? (
                 <div className="flex items-center justify-center p-4">
                   <Loader2 className="h-6 w-6 animate-spin" />
@@ -65,7 +100,11 @@ export function PromptPanel() {
                         setIsCreating(false);
                       }}
                     >
-                      <div className="font-medium">{prompt.title}</div>
+                      <div className="font-medium flex items-center gap-2">
+                        {prompt.title}
+                        {prompt.isLiked && <Heart className="h-4 w-4 text-red-500" />}
+                        {prompt.isNsfw && <ShieldAlert className="h-4 w-4 text-yellow-500" />}
+                      </div>
                       {prompt.tags && prompt.tags.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-1">
                           {prompt.tags.map((tag) => (

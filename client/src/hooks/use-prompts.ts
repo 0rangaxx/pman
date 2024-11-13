@@ -16,7 +16,6 @@ export function usePrompts() {
         metadata: prompt.metadata || {},
       };
       
-      // Ensure we're getting the latest state
       setPrompts((currentPrompts) => {
         console.log('Creating new prompt:', newPrompt);
         return [...currentPrompts, newPrompt];
@@ -31,6 +30,7 @@ export function usePrompts() {
 
   const updatePrompt = useCallback(async (id: number, promptUpdate: Partial<Prompt>) => {
     try {
+      let updatedPrompt: Prompt | undefined;
       setPrompts((currentPrompts) => {
         const index = currentPrompts.findIndex((p) => p.id === id);
         if (index === -1) return currentPrompts;
@@ -41,8 +41,10 @@ export function usePrompts() {
           ...promptUpdate,
           updatedAt: new Date().toISOString(),
         };
+        updatedPrompt = updatedPrompts[index];
         return updatedPrompts;
       });
+      return updatedPrompt;
     } catch (error) {
       console.error('Error updating prompt:', error);
       throw error;

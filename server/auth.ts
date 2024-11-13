@@ -34,29 +34,27 @@ export function setupAuth(app: Express) {
   // Log store creation success
   console.log('PostgreSQL session store initialized');
 
+  // Always set trust proxy for Replit environment
+  app.set('trust proxy', 1);
+
   const sessionSettings: session.SessionOptions = {
     store,
     secret: process.env.REPL_ID || "prompt-manager-secret",
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: process.env.NODE_ENV === 'production',
+      secure: true, // Always use secure cookies on Replit
       httpOnly: true,
       sameSite: 'lax',
       maxAge: 24 * 60 * 60 * 1000 // 24 hours
     },
   };
 
-  // Trust first proxy for secure cookies in production
-  if (process.env.NODE_ENV === 'production') {
-    console.log('Production environment detected, setting trust proxy');
-    app.set("trust proxy", 1);
-  }
-
   // Log session middleware setup
   console.log('Configuring session middleware with settings:', {
     secure: sessionSettings.cookie?.secure,
     sameSite: sessionSettings.cookie?.sameSite,
+    trustProxy: true,
   });
 
   app.use(session(sessionSettings));
@@ -69,11 +67,13 @@ export function setupAuth(app: Express) {
       name: err.name,
       message: err.message,
       stack: err.stack,
+      headers: req.headers,
+      session: req.session?.id,
     });
     
     if (err.message?.includes('redirect_uri_mismatch')) {
       console.error('OAuth callback URL mismatch detected', {
-        expected: "https://prompt-manager.repl.co/auth/google/callback",
+        expected: "https://promptpalette.yoseneko.repl.co/auth/google/callback",
         error: err.message,
       });
       return res.status(401).json({ 
@@ -94,10 +94,7 @@ export function setupAuth(app: Express) {
     next(err);
   });
 
-  const callbackURL = process.env.NODE_ENV === 'production'
-    ? "https://prompt-manager.repl.co/auth/google/callback"
-    : `http://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co/auth/google/callback`;
-
+  const callbackURL = "https://promptpalette.yoseneko.repl.co/auth/google/callback";
   console.log('Configuring Google OAuth with callback URL:', callbackURL);
 
   passport.use(
@@ -106,13 +103,16 @@ export function setupAuth(app: Express) {
         clientID: process.env.GOOGLE_CLIENT_ID!,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
         callbackURL,
+        proxy: true
       },
       async (accessToken, refreshToken, profile, done) => {
         try {
-          console.log('Google OAuth callback initiated', { 
+          console.log('Google OAuth callback received', {
             profileId: profile.id,
-            email: profile.emails?.[0].value,
+            hasEmail: !!profile.emails?.[0]?.value,
+            timestamp: new Date().toISOString(),
             displayName: profile.displayName,
+            provider: profile.provider,
           });
           
           let [user] = await db
@@ -125,6 +125,7 @@ export function setupAuth(app: Express) {
             console.log('Creating new user for Google profile', {
               profileId: profile.id,
               email: profile.emails?.[0].value,
+              timestamp: new Date().toISOString(),
             });
             
             [user] = await db
@@ -140,9 +141,15 @@ export function setupAuth(app: Express) {
                 refreshToken,
               })
               .returning();
-            console.log('New user created successfully', { userId: user.id });
+            console.log('New user created successfully', { 
+              userId: user.id,
+              timestamp: new Date().toISOString(),
+            });
           } else {
-            console.log('Updating existing user', { userId: user.id });
+            console.log('Updating existing user', { 
+              userId: user.id,
+              timestamp: new Date().toISOString(),
+            });
             await db
               .update(users)
               .set({
@@ -160,6 +167,7 @@ export function setupAuth(app: Express) {
           console.error('Error in Google OAuth callback:', {
             error: err,
             stack: (err as Error).stack,
+            timestamp: new Date().toISOString(),
           });
           return done(err as Error);
         }
@@ -168,13 +176,19 @@ export function setupAuth(app: Express) {
   );
 
   passport.serializeUser((user, done) => {
-    console.log('Serializing user', { userId: user.id });
+    console.log('Serializing user', { 
+      userId: user.id,
+      timestamp: new Date().toISOString(),
+    });
     done(null, user.id);
   });
 
   passport.deserializeUser(async (id: number, done) => {
     try {
-      console.log('Deserializing user', { userId: id });
+      console.log('Deserializing user', { 
+        userId: id,
+        timestamp: new Date().toISOString(),
+      });
       const [user] = await db
         .select()
         .from(users)
@@ -182,7 +196,10 @@ export function setupAuth(app: Express) {
         .limit(1);
       
       if (!user) {
-        console.error('User not found during deserialization', { userId: id });
+        console.error('User not found during deserialization', { 
+          userId: id,
+          timestamp: new Date().toISOString(),
+        });
         return done(new Error('User not found'));
       }
       
@@ -192,6 +209,7 @@ export function setupAuth(app: Express) {
         error: err,
         userId: id,
         stack: (err as Error).stack,
+        timestamp: new Date().toISOString(),
       });
       done(err);
     }
@@ -201,6 +219,7 @@ export function setupAuth(app: Express) {
     console.log('Starting Google OAuth flow', {
       timestamp: new Date().toISOString(),
       session: req.session?.id,
+      headers: req.headers,
     });
     
     passport.authenticate("google", {
@@ -216,12 +235,14 @@ export function setupAuth(app: Express) {
         timestamp: new Date().toISOString(),
         query: req.query,
         session: req.session?.id,
+        headers: req.headers,
       });
 
       if (req.query.error) {
         console.error('Google OAuth error:', {
           error: req.query.error,
           errorDescription: req.query.error_description,
+          timestamp: new Date().toISOString(),
         });
       }
 
@@ -237,6 +258,7 @@ export function setupAuth(app: Express) {
     console.log('User logout requested', { 
       userId: req.user?.id,
       session: req.session?.id,
+      timestamp: new Date().toISOString(),
     });
     
     req.logout((err) => {
@@ -245,6 +267,7 @@ export function setupAuth(app: Express) {
           error: err,
           stack: err.stack,
           userId: req.user?.id,
+          timestamp: new Date().toISOString(),
         });
         return res.status(500).json({ message: "Logout failed" });
       }
@@ -258,6 +281,7 @@ export function setupAuth(app: Express) {
       console.log('User data requested', {
         userId: req.user?.id,
         session: req.session?.id,
+        timestamp: new Date().toISOString(),
       });
       return res.json(req.user);
     }

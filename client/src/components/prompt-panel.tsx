@@ -41,10 +41,23 @@ export function PromptPanel() {
   // Memoize filtered prompts
   const filteredPrompts = useMemo(() => {
     return prompts?.filter((prompt) => {
-      // Filter by liked/nsfw status
-      if ((showLikedOnly && !prompt.isLiked) || (showNsfwOnly && !prompt.isNsfw)) {
+      // Filter by liked/nsfw status with separate conditions
+      if (showLikedOnly && !prompt.isLiked) {
         return false;
       }
+      if (showNsfwOnly && !prompt.isNsfw) {
+        return false;
+      }
+
+      // Debug logging for filtering
+      console.log('Filtering prompt:', {
+        id: prompt.id,
+        isLiked: prompt.isLiked,
+        isNsfw: prompt.isNsfw,
+        showLikedOnly,
+        showNsfwOnly,
+        passes: !(showLikedOnly && !prompt.isLiked) && !(showNsfwOnly && !prompt.isNsfw)
+      });
 
       // Filter by selected tags
       if (searchCriteria.selectedTags.length > 0) {
@@ -130,6 +143,16 @@ export function PromptPanel() {
     setIsCreating(false);
   }, []);
 
+  const handleLikedChange = useCallback((checked: boolean) => {
+    console.log('Toggling liked only:', checked);
+    setShowLikedOnly(checked);
+  }, []);
+
+  const handleNsfwChange = useCallback((checked: boolean) => {
+    console.log('Toggling nsfw only:', checked);
+    setShowNsfwOnly(checked);
+  }, []);
+
   return (
     <div className="h-full">
       <PanelGroup direction="horizontal">
@@ -152,7 +175,7 @@ export function PromptPanel() {
                   <Switch
                     id="liked"
                     checked={showLikedOnly}
-                    onCheckedChange={setShowLikedOnly}
+                    onCheckedChange={handleLikedChange}
                   />
                   <Label htmlFor="liked" className="flex items-center gap-2">
                     <Heart className="h-4 w-4" />
@@ -164,7 +187,7 @@ export function PromptPanel() {
                   <Switch
                     id="nsfw"
                     checked={showNsfwOnly}
-                    onCheckedChange={setShowNsfwOnly}
+                    onCheckedChange={handleNsfwChange}
                   />
                   <Label htmlFor="nsfw" className="flex items-center gap-2">
                     <ShieldAlert className="h-4 w-4" />

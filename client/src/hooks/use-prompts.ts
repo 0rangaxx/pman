@@ -23,7 +23,7 @@ export function usePrompts() {
     return response.json();
   };
 
-  const createPrompt = async (prompt: Omit<Prompt, "id" | "userId">) => {
+  const createPrompt = async (prompt: Omit<Prompt, "id">) => {
     await handleRequest("/api/prompts", "POST", prompt);
     mutate();
   };

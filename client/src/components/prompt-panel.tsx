@@ -10,7 +10,7 @@ import { Loader2, Plus, Heart, ShieldAlert } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { isWithinInterval, parseISO } from "date-fns";
+import { isWithinInterval } from "date-fns";
 import { cn } from "@/lib/utils";
 
 export function PromptPanel() {
@@ -179,9 +179,7 @@ export function PromptPanel() {
                       variant={selectedPrompt?.id === prompt.id ? "default" : "ghost"}
                       className="w-full justify-start flex-col items-start p-4 h-auto"
                       onClick={() => {
-                        // Force a fresh load of the prompt data
-                        const freshPrompt = prompts.find(p => p.id === prompt.id);
-                        setSelectedPrompt(freshPrompt || null);
+                        setSelectedPrompt(prompt);  // Use the current prompt from the filtered list
                         setIsCreating(false);
                       }}
                     >

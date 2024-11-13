@@ -2,10 +2,10 @@ import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { type Express } from "express";
 import session from "express-session";
-import createMemoryStore from "memorystore";
 import { users } from "db/schema";
 import { db } from "db";
 import { eq } from "drizzle-orm";
+import connectPgSimple from "connect-pg-simple";
 
 declare global {
   namespace Express {
@@ -14,20 +14,24 @@ declare global {
 }
 
 export function setupAuth(app: Express) {
-  const MemoryStore = createMemoryStore(session);
+  const PostgresqlStore = connectPgSimple(session);
   const sessionSettings: session.SessionOptions = {
+    store: new PostgresqlStore({
+      conObject: {
+        connectionString: process.env.DATABASE_URL,
+        ssl: process.env.NODE_ENV === "production",
+      },
+      createTableIfMissing: true,
+    }),
     secret: process.env.REPL_ID || "prompt-manager-secret",
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: true, // Require HTTPS
-      httpOnly: true, // Prevent XSS
-      sameSite: 'lax', // CSRF protection
+      secure: true,
+      httpOnly: true,
+      sameSite: 'lax',
       maxAge: 24 * 60 * 60 * 1000 // 24 hours
     },
-    store: new MemoryStore({
-      checkPeriod: 86400000,
-    }),
   };
 
   // Trust first proxy for secure cookies in production
@@ -37,19 +41,26 @@ export function setupAuth(app: Express) {
   app.use(passport.initialize());
   app.use(passport.session());
 
-  // Add error handling middleware for authentication
+  // Enhanced error handling middleware
   app.use((err: any, req: any, res: any, next: any) => {
     console.error('Authentication Error:', err);
-    // Check specifically for callback URL mismatch errors
+    
     if (err.message?.includes('redirect_uri_mismatch')) {
       console.error('OAuth callback URL mismatch. Please ensure the callback URL in Google Cloud Console matches: https://prompt-manager.repl.co/auth/google/callback');
       return res.status(401).json({ 
         message: 'Authentication configuration error. Please contact support.' 
       });
     }
+
     if (err.name === 'AuthenticationError') {
       return res.status(401).json({ message: 'Authentication failed' });
     }
+
+    // Handle session-related errors
+    if (err.name === 'SessionError') {
+      return res.status(500).json({ message: 'Session error occurred' });
+    }
+
     next(err);
   });
 
@@ -58,8 +69,6 @@ export function setupAuth(app: Express) {
       {
         clientID: process.env.GOOGLE_CLIENT_ID!,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-        // IMPORTANT: This callback URL must exactly match what's configured in the Google Cloud Console
-        // If you change this URL, make sure to update it in the Google Cloud Console as well
         callbackURL: "https://prompt-manager.repl.co/auth/google/callback",
       },
       async (accessToken, refreshToken, profile, done) => {
@@ -89,7 +98,17 @@ export function setupAuth(app: Express) {
               .returning();
             console.log('New user created successfully', { userId: user.id });
           } else {
-            console.log('Existing user found', { userId: user.id });
+            // Update existing user's tokens
+            await db
+              .update(users)
+              .set({
+                accessToken,
+                refreshToken,
+                displayName: profile.displayName,
+                avatarUrl: profile.photos?.[0].value,
+              })
+              .where(eq(users.id, user.id));
+            console.log('Existing user updated', { userId: user.id });
           }
 
           return done(null, user);
@@ -114,6 +133,11 @@ export function setupAuth(app: Express) {
         .from(users)
         .where(eq(users.id, id))
         .limit(1);
+      
+      if (!user) {
+        return done(new Error('User not found'));
+      }
+      
       done(null, user);
     } catch (err) {
       console.error('Error deserializing user:', err);
@@ -124,7 +148,8 @@ export function setupAuth(app: Express) {
   app.get("/auth/google", (req, res, next) => {
     console.log('Starting Google OAuth flow');
     passport.authenticate("google", {
-      scope: ["profile", "email"]
+      scope: ["profile", "email"],
+      prompt: "select_account"
     })(req, res, next);
   });
 
@@ -135,6 +160,7 @@ export function setupAuth(app: Express) {
       passport.authenticate("google", {
         successRedirect: "/",
         failureRedirect: "/login",
+        failureMessage: true
       })(req, res, next);
     }
   );
@@ -146,7 +172,7 @@ export function setupAuth(app: Express) {
         console.error('Logout error:', err);
         return res.status(500).json({ message: "Logout failed" });
       }
-      res.json({ message: "Logout successful" });
+      res.redirect('/login');
     });
   });
 

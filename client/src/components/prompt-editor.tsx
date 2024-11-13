@@ -16,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { usePrompts } from "../hooks/use-prompts";
 import { Badge } from "@/components/ui/badge";
-import { X, Plus, Loader2, Wand2, Copy } from "lucide-react";
+import { X, Plus, Loader2, Wand2, Copy, Heart, ShieldAlert } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -24,6 +24,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 interface PromptEditorProps {
   prompt: Prompt | null;
@@ -35,6 +37,8 @@ const defaultValues = {
   content: "",
   tags: [],
   metadata: {},
+  isLiked: false,
+  isNsfw: false,
 };
 
 export function PromptEditor({ prompt, onClose }: PromptEditorProps) {
@@ -95,8 +99,8 @@ export function PromptEditor({ prompt, onClose }: PromptEditorProps) {
     setIsFormatting(true);
     const content = form.getValues("content");
     const formatted = content
-      .replace(/,(?!\s)/g, ", ") // Add space after commas if missing
-      .replace(/_/g, " "); // Replace underscores with spaces
+      .replace(/,(?!\s)/g, ", ")
+      .replace(/_/g, " ");
     
     form.setValue("content", formatted);
     
@@ -215,6 +219,44 @@ export function PromptEditor({ prompt, onClose }: PromptEditorProps) {
                 </FormItem>
               )}
             />
+
+            <div className="flex items-center space-x-8">
+              <FormField
+                control={form.control}
+                name="isLiked"
+                render={({ field }) => (
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      id="isLiked"
+                    />
+                    <Label htmlFor="isLiked" className="flex items-center gap-2">
+                      <Heart className="h-4 w-4" />
+                      お気に入り
+                    </Label>
+                  </div>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="isNsfw"
+                render={({ field }) => (
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      id="isNsfw"
+                    />
+                    <Label htmlFor="isNsfw" className="flex items-center gap-2">
+                      <ShieldAlert className="h-4 w-4" />
+                      NSFW
+                    </Label>
+                  </div>
+                )}
+              />
+            </div>
 
             <FormItem>
               <FormLabel>Tags</FormLabel>

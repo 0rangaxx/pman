@@ -65,24 +65,27 @@ export function PromptEditor({ prompt, onClose }: PromptEditorProps) {
   const handleAddTag = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && newTag.trim()) {
       e.preventDefault();
-      if (!tags.includes(newTag.trim())) {
-        form.setValue("tags", [...tags, newTag.trim()]);
+      const currentTags = form.getValues("tags") || [];
+      if (!currentTags.includes(newTag.trim())) {
+        form.setValue("tags", [...currentTags, newTag.trim()]);
       }
       setNewTag("");
     }
   };
 
   const handleRemoveTag = (tagToRemove: string) => {
+    const currentTags = form.getValues("tags") || [];
     form.setValue(
       "tags",
-      tags.filter((tag) => tag !== tagToRemove)
+      currentTags.filter((tag) => tag !== tagToRemove)
     );
   };
 
   const handleAddMetadata = () => {
     if (newMetadataKey.trim() && newMetadataValue.trim()) {
+      const currentMetadata = form.getValues("metadata") || {};
       form.setValue("metadata", {
-        ...metadata,
+        ...currentMetadata,
         [newMetadataKey.trim()]: newMetadataValue.trim(),
       });
       setNewMetadataKey("");
@@ -91,7 +94,8 @@ export function PromptEditor({ prompt, onClose }: PromptEditorProps) {
   };
 
   const handleRemoveMetadata = (key: string) => {
-    const { [key]: _, ...rest } = metadata;
+    const currentMetadata = form.getValues("metadata") || {};
+    const { [key]: _, ...rest } = currentMetadata;
     form.setValue("metadata", rest);
   };
 
@@ -125,7 +129,12 @@ export function PromptEditor({ prompt, onClose }: PromptEditorProps) {
     try {
       setIsSubmitting(true);
       if (prompt) {
-        await updatePrompt(prompt.id, values);
+        const updateData = {
+          ...values,
+          tags: values.tags || [],
+          metadata: values.metadata || {},
+        };
+        await updatePrompt(prompt.id, updateData);
         toast({ title: "Prompt updated successfully" });
       } else {
         await createPrompt(values);
@@ -133,6 +142,7 @@ export function PromptEditor({ prompt, onClose }: PromptEditorProps) {
       }
       onClose();
     } catch (error) {
+      console.error('Form submission error:', error);
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Something went wrong",

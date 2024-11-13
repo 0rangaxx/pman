@@ -4,31 +4,66 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { usePrompts } from "../hooks/use-prompts";
 import { PromptEditor } from "./prompt-editor";
-import { SearchBar } from "./search-bar";
+import { SearchBar, type SearchCriteria } from "./search-bar";
 import type { Prompt } from "db/schema";
 import { Loader2, Plus, Heart, ShieldAlert } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { isWithinInterval, parseISO } from "date-fns";
 
 export function PromptPanel() {
   const { prompts, isLoading } = usePrompts();
   const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchCriteria, setSearchCriteria] = useState<SearchCriteria>({
+    query: "",
+    field: "all",
+    dateRange: undefined,
+  });
   const [isCreating, setIsCreating] = useState(false);
   const [showLikedOnly, setShowLikedOnly] = useState(false);
   const [showNsfwOnly, setShowNsfwOnly] = useState(false);
 
-  const filteredPrompts = prompts?.filter(
-    (prompt) =>
-      ((!showLikedOnly || prompt.isLiked) &&
-       (!showNsfwOnly || prompt.isNsfw)) &&
-      (prompt.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-       prompt.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
-       prompt.tags?.some((tag) =>
-         tag.toLowerCase().includes(searchQuery.toLowerCase())
-       ))
-  );
+  const filteredPrompts = prompts?.filter((prompt) => {
+    // Filter by liked/nsfw status
+    if ((showLikedOnly && !prompt.isLiked) || (showNsfwOnly && !prompt.isNsfw)) {
+      return false;
+    }
+
+    // Filter by date range
+    if (searchCriteria.dateRange?.from && searchCriteria.dateRange?.to) {
+      const promptDate = parseISO(prompt.createdAt.toString());
+      if (!isWithinInterval(promptDate, {
+        start: searchCriteria.dateRange.from,
+        end: searchCriteria.dateRange.to,
+      })) {
+        return false;
+      }
+    }
+
+    // Filter by search query and field
+    if (!searchCriteria.query) return true;
+    
+    const query = searchCriteria.query.toLowerCase();
+    
+    switch (searchCriteria.field) {
+      case "title":
+        return prompt.title.toLowerCase().includes(query);
+      case "content":
+        return prompt.content.toLowerCase().includes(query);
+      case "tags":
+        return prompt.tags?.some(tag => 
+          tag.toLowerCase().includes(query)
+        );
+      case "all":
+      default:
+        return (
+          prompt.title.toLowerCase().includes(query) ||
+          prompt.content.toLowerCase().includes(query) ||
+          prompt.tags?.some(tag => tag.toLowerCase().includes(query))
+        );
+    }
+  });
 
   const handleCreateNew = () => {
     setSelectedPrompt(null);
@@ -47,7 +82,10 @@ export function PromptPanel() {
           <div className="h-full flex flex-col p-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="space-y-4">
               <div className="flex items-center gap-2">
-                <SearchBar value={searchQuery} onChange={setSearchQuery} />
+                <SearchBar 
+                  criteria={searchCriteria} 
+                  onCriteriaChange={setSearchCriteria} 
+                />
                 <Button onClick={handleCreateNew} size="icon">
                   <Plus className="h-4 w-4" />
                 </Button>

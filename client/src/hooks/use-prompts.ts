@@ -1,8 +1,6 @@
 import { useCallback, useState, useEffect } from "react";
 import { useLocalStorage } from "./use-local-storage";
 import type { Prompt } from "db/schema";
-// Removed sanitize functions, as they are not needed in storage operations anymore.
-// export function usePrompts() { ... 
 
 export function usePrompts() {
   const [prompts, setPrompts] = useLocalStorage<Prompt[]>("prompts", []);
@@ -33,12 +31,13 @@ export function usePrompts() {
   const createPrompt = useCallback(async (prompt: Omit<Prompt, "id">) => {
     try {
       console.log('Creating prompt:', prompt);
-      // const sanitizedPrompt = { ... };  // Removed sanitization
       const newPrompt: Prompt = {
         ...prompt,
         id: Date.now(),
         createdAt: new Date(),
         updatedAt: new Date(),
+        tags: prompt.tags ?? [],
+        metadata: prompt.metadata ?? {},
       };
       
       setPrompts((currentPrompts) => {
@@ -58,7 +57,6 @@ export function usePrompts() {
   const updatePrompt = useCallback(async (id: number, promptUpdate: Partial<Prompt>) => {
     try {
       console.log('Updating prompt:', { id, promptUpdate });
-      // const sanitizedUpdate = { ... };  // Removed sanitization
       let updatedPrompt: Prompt;
       
       setPrompts((currentPrompts) => {
@@ -73,6 +71,8 @@ export function usePrompts() {
           ...newPrompts[index],
           ...promptUpdate,
           updatedAt: new Date(),
+          tags: promptUpdate.tags ?? newPrompts[index].tags ?? [],
+          metadata: promptUpdate.metadata ?? newPrompts[index].metadata ?? {},
         };
         newPrompts[index] = updatedPrompt;
         

@@ -12,7 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { isWithinInterval } from "date-fns";
 import { cn } from "@/lib/utils";
-import { desanitizeForDisplay } from "@/lib/security";
+import { desanitizeForDisplay, sanitizeInput } from "@/lib/security";
 
 export function PromptPanel() {
   const { prompts, isLoading, refreshPrompts } = usePrompts();
@@ -81,16 +81,22 @@ export function PromptPanel() {
 
       // Filter by search query and field
       if (!searchCriteria.query) return true;
-      
-      const query = searchCriteria.caseSensitive 
-        ? searchCriteria.query 
+
+      const query = searchCriteria.caseSensitive
+        ? searchCriteria.query
         : searchCriteria.query.toLowerCase();
 
       const matchText = (text: string) => {
-        const searchText = searchCriteria.caseSensitive ? text : text.toLowerCase();
-        return searchText.includes(query);
+        // Desanitize the stored text for comparison
+        const desanitizedText = desanitizeForDisplay(text);
+        const searchText = searchCriteria.caseSensitive 
+          ? desanitizedText 
+          : desanitizedText.toLowerCase();
+        // Sanitize the query to match the same format as stored text
+        const sanitizedQuery = sanitizeInput(query);
+        return searchText.includes(desanitizeForDisplay(sanitizedQuery));
       };
-      
+
       switch (searchCriteria.field) {
         case "title":
           return matchText(prompt.title);

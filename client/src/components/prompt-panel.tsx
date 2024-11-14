@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { isWithinInterval } from "date-fns";
 import { cn } from "@/lib/utils";
+import { desanitizeForDisplay } from "@/lib/security";
 
 export function PromptPanel() {
   const { prompts, isLoading, refreshPrompts } = usePrompts();
@@ -218,9 +219,12 @@ export function PromptPanel() {
                       onClick={() => handlePromptSelect(prompt)}
                     >
                       <div className="font-medium flex items-center gap-2">
-                        {prompt.title}
+                        {desanitizeForDisplay(prompt.title)}
                         {prompt.isLiked && <Heart className="h-4 w-4 text-red-500" />}
                         {prompt.isNsfw && <ShieldAlert className="h-4 w-4 text-yellow-500" />}
+                      </div>
+                      <div className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                        {desanitizeForDisplay(prompt.content)}
                       </div>
                       {Array.isArray(prompt.tags) && prompt.tags.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-1">
@@ -236,7 +240,7 @@ export function PromptPanel() {
                               )}
                               onClick={(e) => handleTagClick(tag, e)}
                             >
-                              {tag}
+                              {desanitizeForDisplay(tag)}
                             </Badge>
                           ))}
                         </div>

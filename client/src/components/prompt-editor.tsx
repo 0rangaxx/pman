@@ -29,7 +29,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Alert } from "@/components/ui/alert";
-import { sanitizeObject } from "@/lib/security";
+import { sanitizeObject, desanitizeForDisplay } from "@/lib/security";
 
 interface PromptEditorProps {
   prompt: Prompt | null;
@@ -63,11 +63,15 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
 
   useEffect(() => {
     if (prompt) {
+      // Desanitize values when displaying in the form
       form.reset({
-        title: prompt.title,
-        content: prompt.content,
-        tags: Array.isArray(prompt.tags) ? prompt.tags : [],
-        metadata: prompt.metadata || {},
+        title: desanitizeForDisplay(prompt.title),
+        content: desanitizeForDisplay(prompt.content),
+        tags: Array.isArray(prompt.tags) ? prompt.tags.map(desanitizeForDisplay) : [],
+        metadata: Object.entries(prompt.metadata || {}).reduce((acc, [key, value]) => ({
+          ...acc,
+          [desanitizeForDisplay(key)]: typeof value === 'string' ? desanitizeForDisplay(value) : value
+        }), {}),
         isLiked: prompt.isLiked || false,
         isNsfw: prompt.isNsfw || false,
       });

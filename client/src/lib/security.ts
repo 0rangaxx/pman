@@ -21,6 +21,24 @@ export function sanitizeInput(input: string): string {
 }
 
 /**
+ * Desanitize HTML entities for display purposes
+ * @param input The sanitized string
+ * @returns Desanitized string for display
+ */
+export function desanitizeForDisplay(input: string): string {
+  if (typeof input !== 'string') {
+    return '';
+  }
+  return input
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#x27;/g, "'")
+    .replace(/&#x2F;/g, '/')
+    .replace(/&amp;/g, '&');
+}
+
+/**
  * Sanitize an object's string properties recursively
  * @param obj The object to sanitize
  * @returns Sanitized object

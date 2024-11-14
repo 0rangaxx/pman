@@ -26,7 +26,6 @@ import {
 } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { validateInputLength } from "../lib/security";
 
 interface PromptEditorProps {
   prompt: Prompt | null;
@@ -79,22 +78,13 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
   const handleAddTag = useCallback((e: React.KeyboardEvent) => {
     if (e.key === "Enter" && newTag.trim()) {
       e.preventDefault();
-      const sanitizedTag = newTag.trim(); // Removed sanitizeInput
-      if (validateInputLength(sanitizedTag, 50)) {
-        const currentTags = form.getValues("tags") || [];
-        if (!currentTags.includes(sanitizedTag)) {
-          form.setValue("tags", [...currentTags, sanitizedTag]);
-        }
-        setNewTag("");
-      } else {
-        toast({
-          title: "Error",
-          description: "Tag is too long (maximum 50 characters)",
-          variant: "destructive",
-        });
+      const currentTags = form.getValues("tags") || [];
+      if (!currentTags.includes(newTag.trim())) {
+        form.setValue("tags", [...currentTags, newTag.trim()]);
       }
+      setNewTag("");
     }
-  }, [newTag, form, toast]);
+  }, [newTag, form]);
 
   const handleRemoveTag = useCallback((tagToRemove: string) => {
     const currentTags = form.getValues("tags") || [];
@@ -106,27 +96,15 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
 
   const handleAddMetadata = useCallback(() => {
     if (newMetadataKey.trim() && newMetadataValue.trim()) {
-      const sanitizedKey = newMetadataKey.trim(); // Removed sanitizeInput
-      const sanitizedValue = newMetadataValue.trim(); // Removed sanitizeInput
-      
-      if (!validateInputLength(sanitizedKey, 100) || !validateInputLength(sanitizedValue, 500)) {
-        toast({
-          title: "Error",
-          description: "Metadata key or value is too long",
-          variant: "destructive",
-        });
-        return;
-      }
-
       const currentMetadata = form.getValues("metadata") || {};
       form.setValue("metadata", {
         ...currentMetadata,
-        [sanitizedKey]: sanitizedValue,
+        [newMetadataKey.trim()]: newMetadataValue.trim(),
       });
       setNewMetadataKey("");
       setNewMetadataValue("");
     }
-  }, [newMetadataKey, newMetadataValue, form, toast]);
+  }, [newMetadataKey, newMetadataValue, form]);
 
   const handleRemoveMetadata = useCallback((key: string) => {
     const currentMetadata = form.getValues("metadata") || {};
@@ -163,14 +141,7 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
   const onSubmit = async (values: any) => {
     try {
       setIsSubmitting(true);
-      
-      // Validate input lengths
-      if (!validateInputLength(values.title, 200) || 
-          !validateInputLength(values.content, 10000)) {
-        throw new Error("Input length exceeds maximum allowed");
-      }
-
-      console.log('Submitting form values:', values); // Removed sanitizedValues
+      console.log('Submitting form values:', values);
       
       if (prompt) {
         const updateData = {
@@ -185,7 +156,7 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
         setSelectedPrompt(updatedPrompt);
       } else {
         console.log('Creating new prompt');
-        const newPrompt = await createPrompt(values); // Removed sanitizedValues
+        const newPrompt = await createPrompt(values);
         console.log('Creation successful:', newPrompt);
         toast({ title: "Prompt created successfully" });
         onClose();

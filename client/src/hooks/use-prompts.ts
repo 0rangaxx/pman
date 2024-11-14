@@ -1,7 +1,8 @@
 import { useCallback, useState, useEffect } from "react";
 import { useLocalStorage } from "./use-local-storage";
 import type { Prompt } from "db/schema";
-import { sanitizeInput, sanitizeMetadata, sanitizeTags } from "../lib/security";
+// Removed sanitize functions, as they are not needed in storage operations anymore.
+// export function usePrompts() { ... 
 
 export function usePrompts() {
   const [prompts, setPrompts] = useLocalStorage<Prompt[]>("prompts", []);
@@ -32,16 +33,9 @@ export function usePrompts() {
   const createPrompt = useCallback(async (prompt: Omit<Prompt, "id">) => {
     try {
       console.log('Creating prompt:', prompt);
-      const sanitizedPrompt = {
-        ...prompt,
-        title: sanitizeInput(prompt.title),
-        content: sanitizeInput(prompt.content),
-        tags: sanitizeTags(prompt.tags ?? []),
-        metadata: sanitizeMetadata(prompt.metadata ?? {}),
-      };
-
+      // const sanitizedPrompt = { ... };  // Removed sanitization
       const newPrompt: Prompt = {
-        ...sanitizedPrompt,
+        ...prompt,
         id: Date.now(),
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -64,14 +58,7 @@ export function usePrompts() {
   const updatePrompt = useCallback(async (id: number, promptUpdate: Partial<Prompt>) => {
     try {
       console.log('Updating prompt:', { id, promptUpdate });
-      const sanitizedUpdate = {
-        ...promptUpdate,
-        title: promptUpdate.title ? sanitizeInput(promptUpdate.title) : undefined,
-        content: promptUpdate.content ? sanitizeInput(promptUpdate.content) : undefined,
-        tags: promptUpdate.tags ? sanitizeTags(promptUpdate.tags) : undefined,
-        metadata: promptUpdate.metadata ? sanitizeMetadata(promptUpdate.metadata) : undefined,
-      };
-
+      // const sanitizedUpdate = { ... };  // Removed sanitization
       let updatedPrompt: Prompt;
       
       setPrompts((currentPrompts) => {
@@ -84,7 +71,7 @@ export function usePrompts() {
 
         updatedPrompt = {
           ...newPrompts[index],
-          ...sanitizedUpdate,
+          ...promptUpdate,
           updatedAt: new Date(),
         };
         newPrompts[index] = updatedPrompt;

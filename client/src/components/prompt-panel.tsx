@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { isWithinInterval } from "date-fns";
 import { cn } from "@/lib/utils";
+import { escapeForDisplay } from "../lib/security";
 
 export function PromptPanel() {
   const { prompts, isLoading, refreshPrompts } = usePrompts();
@@ -218,7 +219,7 @@ export function PromptPanel() {
                       onClick={() => handlePromptSelect(prompt)}
                     >
                       <div className="font-medium flex items-center gap-2">
-                        {prompt.title}
+                        {escapeForDisplay(prompt.title)}
                         {prompt.isLiked && <Heart className="h-4 w-4 text-red-500" />}
                         {prompt.isNsfw && <ShieldAlert className="h-4 w-4 text-yellow-500" />}
                       </div>
@@ -236,7 +237,7 @@ export function PromptPanel() {
                               )}
                               onClick={(e) => handleTagClick(tag, e)}
                             >
-                              {tag}
+                              {escapeForDisplay(tag)}
                             </Badge>
                           ))}
                         </div>

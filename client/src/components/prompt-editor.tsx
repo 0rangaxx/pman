@@ -10,22 +10,26 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { usePrompts } from "../hooks/use-prompts";
 import { Badge } from "@/components/ui/badge";
-import { X, Plus, Loader2, Wand2, Copy, Heart, ShieldAlert } from "lucide-react";
+import { X, Plus, Loader2, Wand2, Copy, Heart, ShieldAlert, AlertCircle } from "lucide-react";
 import {
   Card,
   CardContent,
   CardFooter,
   CardHeader,
   CardTitle,
+  CardDescription,
 } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Alert } from "@/components/ui/alert";
+import { sanitizeObject } from "@/lib/security";
 
 interface PromptEditorProps {
   prompt: Prompt | null;
@@ -50,13 +54,13 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
   const [newMetadataKey, setNewMetadataKey] = useState("");
   const [newMetadataValue, setNewMetadataValue] = useState("");
   const [isFormatting, setIsFormatting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const form = useForm({
     resolver: zodResolver(insertPromptSchema),
     defaultValues: prompt || defaultValues,
   });
 
-  // Only reset form when prompt changes
   useEffect(() => {
     if (prompt) {
       form.reset({
@@ -78,9 +82,10 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
   const handleAddTag = useCallback((e: React.KeyboardEvent) => {
     if (e.key === "Enter" && newTag.trim()) {
       e.preventDefault();
+      const sanitizedTag = sanitizeObject({ tag: newTag.trim() }).tag;
       const currentTags = form.getValues("tags") || [];
-      if (!currentTags.includes(newTag.trim())) {
-        form.setValue("tags", [...currentTags, newTag.trim()]);
+      if (!currentTags.includes(sanitizedTag)) {
+        form.setValue("tags", [...currentTags, sanitizedTag]);
       }
       setNewTag("");
     }
@@ -96,10 +101,14 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
 
   const handleAddMetadata = useCallback(() => {
     if (newMetadataKey.trim() && newMetadataValue.trim()) {
+      const sanitized = sanitizeObject({
+        key: newMetadataKey.trim(),
+        value: newMetadataValue.trim()
+      });
       const currentMetadata = form.getValues("metadata") || {};
       form.setValue("metadata", {
         ...currentMetadata,
-        [newMetadataKey.trim()]: newMetadataValue.trim(),
+        [sanitized.key]: sanitized.value,
       });
       setNewMetadataKey("");
       setNewMetadataValue("");
@@ -141,24 +150,33 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
   const onSubmit = async (values: any) => {
     try {
       setIsSubmitting(true);
-      console.log('Submitting form values:', values);
+      console.log('Submitting sanitized form values:', values);
+      
+      // Sanitize all input values
+      const sanitizedValues = sanitizeObject(values);
       
       if (prompt) {
         const updateData = {
-          ...values,
-          tags: values.tags || [],
-          metadata: values.metadata || {},
+          ...sanitizedValues,
+          tags: sanitizedValues.tags || [],
+          metadata: sanitizedValues.metadata || {},
         };
         console.log('Updating prompt:', updateData);
         const updatedPrompt = await updatePrompt(prompt.id, updateData);
         console.log('Update successful:', updatedPrompt);
-        toast({ title: "Prompt updated successfully" });
+        toast({ 
+          title: "Prompt updated successfully",
+          variant: "default"
+        });
         setSelectedPrompt(updatedPrompt);
       } else {
         console.log('Creating new prompt');
-        const newPrompt = await createPrompt(values);
+        const newPrompt = await createPrompt(sanitizedValues);
         console.log('Creation successful:', newPrompt);
-        toast({ title: "Prompt created successfully" });
+        toast({ 
+          title: "Prompt created successfully",
+          variant: "default"
+        });
         onClose();
       }
     } catch (error) {
@@ -178,11 +196,18 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
   });
 
   const handleDelete = async () => {
-    if (!prompt) return;
+    if (!prompt || !showDeleteConfirm) {
+      setShowDeleteConfirm(true);
+      return;
+    }
+    
     try {
       setIsSubmitting(true);
       await deletePrompt(prompt.id);
-      toast({ title: "Prompt deleted successfully" });
+      toast({ 
+        title: "Prompt deleted successfully",
+        variant: "default"
+      });
       onClose();
     } catch (error) {
       toast({
@@ -192,6 +217,7 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
       });
     } finally {
       setIsSubmitting(false);
+      setShowDeleteConfirm(false);
     }
   };
 
@@ -199,9 +225,12 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
     <Card className="w-full">
       <CardHeader>
         <CardTitle>{prompt ? "Edit Prompt" : "Create New Prompt"}</CardTitle>
+        <CardDescription>
+          {prompt ? "Update the existing prompt" : "Create a new prompt with the form below"}
+        </CardDescription>
       </CardHeader>
       <Form {...form}>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="space-y-6">
           <CardContent className="space-y-4">
             <FormField
               control={form.control}
@@ -210,8 +239,11 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
                 <FormItem>
                   <FormLabel>Title</FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <Input {...field} maxLength={100} />
                   </FormControl>
+                  <FormDescription>
+                    Enter a descriptive title for your prompt
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -225,7 +257,7 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
                   <FormLabel>Content</FormLabel>
                   <div className="flex gap-2">
                     <FormControl className="flex-1">
-                      <Textarea {...field} className="min-h-[200px]" />
+                      <Textarea {...field} className="min-h-[200px]" maxLength={2000} />
                     </FormControl>
                     <div className="flex flex-col gap-2">
                       <Button
@@ -249,6 +281,9 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
                       </Button>
                     </div>
                   </div>
+                  <FormDescription>
+                    Write your prompt content here. Use the format button to clean up the text.
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -310,11 +345,15 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
                 ))}
               </div>
               <Input
-                placeholder="Add tag..."
+                placeholder="Add tag and press Enter..."
                 value={newTag}
                 onChange={(e) => setNewTag(e.target.value)}
                 onKeyDown={handleAddTag}
+                maxLength={50}
               />
+              <FormDescription>
+                Press Enter to add a new tag. Tags help organize your prompts.
+              </FormDescription>
             </FormItem>
 
             <FormItem>
@@ -342,11 +381,13 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
                     placeholder="Key"
                     value={newMetadataKey}
                     onChange={(e) => setNewMetadataKey(e.target.value)}
+                    maxLength={50}
                   />
                   <Input
                     placeholder="Value"
                     value={newMetadataValue}
                     onChange={(e) => setNewMetadataValue(e.target.value)}
+                    maxLength={100}
                   />
                   <Button
                     type="button"
@@ -356,8 +397,18 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
                     <Plus className="h-4 w-4" />
                   </Button>
                 </div>
+                <FormDescription>
+                  Add custom metadata as key-value pairs to provide additional information.
+                </FormDescription>
               </div>
             </FormItem>
+
+            {showDeleteConfirm && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <p>Are you sure you want to delete this prompt? This action cannot be undone.</p>
+              </Alert>
+            )}
           </CardContent>
 
           <CardFooter className="flex justify-end gap-2">
@@ -370,6 +421,8 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
               >
                 {isSubmitting ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
+                ) : showDeleteConfirm ? (
+                  "Confirm Delete"
                 ) : (
                   "Delete"
                 )}

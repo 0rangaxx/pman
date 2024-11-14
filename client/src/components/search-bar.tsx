@@ -28,6 +28,7 @@ import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import type { DateRange } from "react-day-picker";
+import { sanitizeInput, escapeRegExp } from "../lib/security";
 
 export interface SearchCriteria {
   query: string;
@@ -46,6 +47,19 @@ interface SearchBarProps {
 export function SearchBar({ criteria, onCriteriaChange, availableTags }: SearchBarProps) {
   const [open, setOpen] = useState(false);
 
+  const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const sanitizedQuery = sanitizeInput(e.target.value);
+    onCriteriaChange({ ...criteria, query: sanitizedQuery });
+  };
+
+  const handleTagSelect = (tag: string) => {
+    const sanitizedTag = sanitizeInput(tag);
+    const updatedTags = criteria.selectedTags.includes(sanitizedTag)
+      ? criteria.selectedTags.filter((t) => t !== sanitizedTag)
+      : [...criteria.selectedTags, sanitizedTag];
+    onCriteriaChange({ ...criteria, selectedTags: updatedTags });
+  };
+
   return (
     <div className="space-y-2">
       <div className="flex gap-2">
@@ -54,10 +68,9 @@ export function SearchBar({ criteria, onCriteriaChange, availableTags }: SearchB
           <Input
             placeholder="Search prompts..."
             value={criteria.query}
-            onChange={(e) => 
-              onCriteriaChange({ ...criteria, query: e.target.value })
-            }
+            onChange={handleSearchInputChange}
             className="pl-8"
+            maxLength={100}
           />
         </div>
         <Select
@@ -114,12 +127,7 @@ export function SearchBar({ criteria, onCriteriaChange, availableTags }: SearchB
                   <CommandItem
                     key={tag}
                     value={tag}
-                    onSelect={() => {
-                      const updatedTags = criteria.selectedTags.includes(tag)
-                        ? criteria.selectedTags.filter((t) => t !== tag)
-                        : [...criteria.selectedTags, tag];
-                      onCriteriaChange({ ...criteria, selectedTags: updatedTags });
-                    }}
+                    onSelect={() => handleTagSelect(tag)}
                   >
                     <Check
                       className={cn(

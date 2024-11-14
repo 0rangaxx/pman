@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { sanitizeInput, sanitizeMetadata, sanitizeTags, validateInputLength } from "../lib/security";
 
 interface PromptEditorProps {
   prompt: Prompt | null;
@@ -78,13 +79,22 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
   const handleAddTag = useCallback((e: React.KeyboardEvent) => {
     if (e.key === "Enter" && newTag.trim()) {
       e.preventDefault();
-      const currentTags = form.getValues("tags") || [];
-      if (!currentTags.includes(newTag.trim())) {
-        form.setValue("tags", [...currentTags, newTag.trim()]);
+      const sanitizedTag = sanitizeInput(newTag.trim());
+      if (validateInputLength(sanitizedTag, 50)) {
+        const currentTags = form.getValues("tags") || [];
+        if (!currentTags.includes(sanitizedTag)) {
+          form.setValue("tags", [...currentTags, sanitizedTag]);
+        }
+        setNewTag("");
+      } else {
+        toast({
+          title: "Error",
+          description: "Tag is too long (maximum 50 characters)",
+          variant: "destructive",
+        });
       }
-      setNewTag("");
     }
-  }, [newTag, form]);
+  }, [newTag, form, toast]);
 
   const handleRemoveTag = useCallback((tagToRemove: string) => {
     const currentTags = form.getValues("tags") || [];
@@ -96,15 +106,27 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
 
   const handleAddMetadata = useCallback(() => {
     if (newMetadataKey.trim() && newMetadataValue.trim()) {
+      const sanitizedKey = sanitizeInput(newMetadataKey.trim());
+      const sanitizedValue = sanitizeInput(newMetadataValue.trim());
+      
+      if (!validateInputLength(sanitizedKey, 100) || !validateInputLength(sanitizedValue, 500)) {
+        toast({
+          title: "Error",
+          description: "Metadata key or value is too long",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const currentMetadata = form.getValues("metadata") || {};
       form.setValue("metadata", {
         ...currentMetadata,
-        [newMetadataKey.trim()]: newMetadataValue.trim(),
+        [sanitizedKey]: sanitizedValue,
       });
       setNewMetadataKey("");
       setNewMetadataValue("");
     }
-  }, [newMetadataKey, newMetadataValue, form]);
+  }, [newMetadataKey, newMetadataValue, form, toast]);
 
   const handleRemoveMetadata = useCallback((key: string) => {
     const currentMetadata = form.getValues("metadata") || {};
@@ -141,13 +163,29 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
   const onSubmit = async (values: any) => {
     try {
       setIsSubmitting(true);
-      console.log('Submitting form values:', values);
+      
+      // Sanitize all input values
+      const sanitizedValues = {
+        ...values,
+        title: sanitizeInput(values.title),
+        content: sanitizeInput(values.content),
+        tags: sanitizeTags(values.tags || []),
+        metadata: sanitizeMetadata(values.metadata || {}),
+      };
+
+      // Validate lengths
+      if (!validateInputLength(sanitizedValues.title, 200) || 
+          !validateInputLength(sanitizedValues.content, 10000)) {
+        throw new Error("Input length exceeds maximum allowed");
+      }
+
+      console.log('Submitting sanitized form values:', sanitizedValues);
       
       if (prompt) {
         const updateData = {
-          ...values,
-          tags: values.tags || [],
-          metadata: values.metadata || {},
+          ...sanitizedValues,
+          tags: sanitizedValues.tags || [],
+          metadata: sanitizedValues.metadata || {},
         };
         console.log('Updating prompt:', updateData);
         const updatedPrompt = await updatePrompt(prompt.id, updateData);
@@ -156,7 +194,7 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
         setSelectedPrompt(updatedPrompt);
       } else {
         console.log('Creating new prompt');
-        const newPrompt = await createPrompt(values);
+        const newPrompt = await createPrompt(sanitizedValues);
         console.log('Creation successful:', newPrompt);
         toast({ title: "Prompt created successfully" });
         onClose();

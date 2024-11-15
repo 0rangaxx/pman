@@ -57,7 +57,7 @@ export function SearchBar({ criteria, onCriteriaChange, availableTags }: SearchB
             onChange={(e) => 
               onCriteriaChange({ ...criteria, query: e.target.value })
             }
-            className="pl-8"
+            className="pl-8 dark:bg-background/80 dark:border-border"
           />
         </div>
         <Select
@@ -66,7 +66,7 @@ export function SearchBar({ criteria, onCriteriaChange, availableTags }: SearchB
             onCriteriaChange({ ...criteria, field: value })
           }
         >
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-[180px] dark:bg-background/80 dark:border-border">
             <SelectValue placeholder="Search in..." />
           </SelectTrigger>
           <SelectContent>
@@ -88,7 +88,7 @@ export function SearchBar({ criteria, onCriteriaChange, availableTags }: SearchB
               onCriteriaChange({ ...criteria, caseSensitive: checked })
             }
           />
-          <Label htmlFor="case-sensitive">Case Sensitive</Label>
+          <Label htmlFor="case-sensitive" className="text-foreground dark:text-foreground/90">Case Sensitive</Label>
         </div>
 
         <Popover open={open} onOpenChange={setOpen}>
@@ -97,7 +97,7 @@ export function SearchBar({ criteria, onCriteriaChange, availableTags }: SearchB
               variant="outline"
               role="combobox"
               aria-expanded={open}
-              className="justify-between"
+              className="justify-between dark:bg-background/80 dark:border-border"
             >
               {criteria.selectedTags.length > 0
                 ? `${criteria.selectedTags.length} tags selected`
@@ -107,7 +107,7 @@ export function SearchBar({ criteria, onCriteriaChange, availableTags }: SearchB
           </PopoverTrigger>
           <PopoverContent className="w-[300px] p-0">
             <Command>
-              <CommandInput placeholder="Search tags..." />
+              <CommandInput placeholder="Search tags..." className="dark:bg-background/80 dark:border-border" />
               <CommandEmpty>No tags found.</CommandEmpty>
               <CommandGroup className="max-h-[200px] overflow-auto">
                 {availableTags.map((tag) => (
@@ -177,6 +177,7 @@ export function SearchBar({ criteria, onCriteriaChange, availableTags }: SearchB
         onDateChange={(date) =>
           onCriteriaChange({ ...criteria, dateRange: date })
         }
+        className="dark:bg-background/80 dark:border-border"
       />
     </div>
   );

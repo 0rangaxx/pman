@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "../hooks/use-auth";
 
 const registerSchema = z.object({
   username: z.string().min(1, "Username is required"),
@@ -36,6 +37,7 @@ type RegisterForm = z.infer<typeof registerSchema>;
 export function Register() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const { register } = useAuth();
   
   const form = useForm<RegisterForm>({
     resolver: zodResolver(registerSchema),
@@ -48,13 +50,14 @@ export function Register() {
 
   const onSubmit = async (data: RegisterForm) => {
     try {
-      // TODO: Implement registration logic
+      await register(data.username, data.password);
       toast({
         title: "Success",
         description: "Registration successful! Please login to continue.",
       });
       navigate("/login");
     } catch (error) {
+      console.error('Registration error:', error);
       toast({
         variant: "destructive",
         title: "Error",

@@ -3,6 +3,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useAuth } from "../hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
 import {
   Card,
   CardContent,
@@ -39,6 +40,7 @@ type SettingsForm = z.infer<typeof settingsSchema>;
 export function Settings() {
   const { user, logout } = useAuth();
   const { toast } = useToast();
+  const [, navigate] = useLocation();
 
   const form = useForm<SettingsForm>({
     resolver: zodResolver(settingsSchema),
@@ -68,13 +70,9 @@ export function Settings() {
         description: "Settings updated successfully",
       });
 
-      // Clear password fields after successful update
-      form.reset({
-        username: data.username,
-        currentPassword: "",
-        newPassword: "",
-        confirmPassword: "",
-      });
+      // Add logout and navigation
+      await logout();
+      navigate("/login");
     } catch (error) {
       toast({
         variant: "destructive",

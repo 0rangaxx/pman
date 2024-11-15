@@ -23,7 +23,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { AlertCircle, Eye, EyeOff, Moon, Sun } from "lucide-react";
+import { AlertCircle, Eye, EyeOff, Moon, Sun, ChevronLeft } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
@@ -111,6 +111,16 @@ export function Settings() {
 
   return (
     <div className="container max-w-2xl py-8">
+      <div className="flex items-center gap-4 mb-4">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => navigate("/prompts")}
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <h2 className="text-lg font-semibold">Settings</h2>
+      </div>
       <Card>
         <CardHeader>
           <CardTitle>Settings</CardTitle>

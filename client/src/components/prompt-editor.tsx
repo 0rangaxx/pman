@@ -344,9 +344,8 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-4 w-4 p-0 ml-2"
+                      className="h-4 w-4 p-0 ml-2 dark:bg-background/80 dark:border-border"
                       onClick={() => handleRemoveTag(tag)}
-                      className="dark:bg-background/80 dark:border-border"
                     >
                       <X className="h-3 w-3" />
                     </Button>
@@ -379,9 +378,8 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="ml-auto"
+                      className="ml-auto dark:bg-background/80 dark:border-border"
                       onClick={() => handleRemoveMetadata(key)}
-                      className="dark:bg-background/80 dark:border-border"
                     >
                       <X className="h-4 w-4" />
                     </Button>

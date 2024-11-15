@@ -14,9 +14,17 @@ export function Landing() {
       <header className="border-b p-4">
         <div className="container flex justify-between items-center">
           <h1 className="text-2xl font-bold">Prompt Palette</h1>
-          <Link href="/prompts">
-            <Button>Get Started</Button>
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link href="/login">
+              <Button variant="outline">Login</Button>
+            </Link>
+            <Link href="/register">
+              <Button variant="outline">Register</Button>
+            </Link>
+            <Link href="/prompts">
+              <Button>Get Started</Button>
+            </Link>
+          </div>
         </div>
       </header>
       

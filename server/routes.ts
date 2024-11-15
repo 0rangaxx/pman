@@ -34,6 +34,7 @@ export function registerRoutes(app: Express) {
   app.post("/api/register", async (req, res) => {
     try {
       const { username, password } = req.body;
+      console.log('Registering user:', username);
       
       const existingUser = await db.select().from(users).where(eq(users.username, username));
       if (existingUser.length > 0) {
@@ -46,8 +47,10 @@ export function registerRoutes(app: Express) {
         password: hashedPassword,
       }).returning();
 
+      console.log('User registered successfully:', user.id);
       res.json({ user: { id: user.id, username: user.username } });
     } catch (error) {
+      console.error('Registration error:', error);
       res.status(500).json({ error: "Registration failed" });
     }
   });
@@ -82,6 +85,7 @@ export function registerRoutes(app: Express) {
         token,
       });
     } catch (error) {
+      console.error('Login error:', error);
       res.status(500).json({ error: "Login failed" });
     }
   });

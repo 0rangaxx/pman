@@ -30,17 +30,16 @@ export function useAuth() {
         body: JSON.stringify({ username, password }),
       });
 
+      const data = await response.json();
       if (!response.ok) {
-        const data = await response.json();
         throw new Error(data.error || "Login failed");
       }
 
-      const data = await response.json();
       setAuthState({ user: data.user, token: data.token });
       await mutate(data.user);
       return data.user;
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('Login error:', error instanceof Error ? error.message : "Unknown error");
       throw error;
     }
   }, [setAuthState, mutate]);

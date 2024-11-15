@@ -83,8 +83,8 @@ export function PromptPanel() {
 
       const matchText = (text: string) => {
         const desanitizedText = desanitizeForDisplay(text);
-        const searchText = searchCriteria.caseSensitive 
-          ? desanitizedText 
+        const searchText = searchCriteria.caseSensitive
+          ? desanitizedText
           : desanitizedText.toLowerCase();
         const sanitizedQuery = sanitizeInput(query);
         return searchText.includes(desanitizeForDisplay(sanitizedQuery));
@@ -154,14 +154,14 @@ export function PromptPanel() {
   }, []);
 
   return (
-    <div className="h-full">
+    <div className="h-full bg-background dark:bg-background">
       <PanelGroup direction="horizontal">
         <Panel defaultSize={30} minSize={20}>
           <div className="h-full flex flex-col p-4 bg-background/95 dark:bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="space-y-4">
               <div className="flex items-center gap-2">
-                <SearchBar 
-                  criteria={searchCriteria} 
+                <SearchBar
+                  criteria={searchCriteria}
                   onCriteriaChange={setSearchCriteria}
                   availableTags={availableTags}
                 />
@@ -169,7 +169,7 @@ export function PromptPanel() {
                   <Plus className="h-4 w-4" />
                 </Button>
               </div>
-              
+
               <div className="flex items-center space-x-8">
                 <div className="flex items-center space-x-2">
                   <Switch
@@ -197,8 +197,8 @@ export function PromptPanel() {
               </div>
             </div>
 
-            <ScrollArea 
-              className="flex-1 mt-4" 
+            <ScrollArea
+              className="flex-1 mt-4"
               key={`${prompts?.length}-${showLikedOnly}-${showNsfwOnly}-${searchCriteria.query}`}
             >
               {isLoading ? (
@@ -231,8 +231,8 @@ export function PromptPanel() {
                       {Array.isArray(prompt.tags) && prompt.tags.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-1">
                           {prompt.tags.map((tag) => (
-                            <Badge 
-                              key={tag} 
+                            <Badge
+                              key={tag}
                               variant={searchCriteria.selectedTags.includes(tag) ? "default" : "secondary"}
                               className={cn(
                                 "text-xs cursor-pointer",
@@ -254,9 +254,9 @@ export function PromptPanel() {
             </ScrollArea>
           </div>
         </Panel>
-        
+
         <PanelResizeHandle className="w-1.5 bg-border mx-1 rounded-full" />
-        
+
         <Panel defaultSize={70}>
           <div className="h-full p-4">
             {(selectedPrompt || isCreating) && (

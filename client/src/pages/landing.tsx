@@ -1,4 +1,4 @@
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { 
   Card, 
@@ -7,8 +7,20 @@ import {
   CardHeader, 
   CardTitle 
 } from "@/components/ui/card";
+import { useAuth } from "../hooks/use-auth";
 
 export function Landing() {
+  const { isAuthenticated } = useAuth();
+  const [, navigate] = useLocation();
+
+  const handleGetStarted = () => {
+    if (isAuthenticated) {
+      navigate("/prompts");
+    } else {
+      navigate("/login");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <header className="border-b p-4">
@@ -21,9 +33,7 @@ export function Landing() {
             <Link href="/register">
               <Button variant="outline">Register</Button>
             </Link>
-            <Link href="/prompts">
-              <Button>Get Started</Button>
-            </Link>
+            <Button onClick={handleGetStarted}>Get Started</Button>
           </div>
         </div>
       </header>
@@ -90,11 +100,9 @@ export function Landing() {
           </div>
 
           <div className="text-center">
-            <Link href="/prompts">
-              <Button size="lg" className="mt-8">
-                Start Managing Your Prompts
-              </Button>
-            </Link>
+            <Button size="lg" className="mt-8" onClick={handleGetStarted}>
+              Start Managing Your Prompts
+            </Button>
           </div>
         </div>
       </main>

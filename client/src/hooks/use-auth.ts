@@ -31,7 +31,8 @@ export function useAuth() {
       });
 
       if (!response.ok) {
-        throw new Error("Login failed");
+        const data = await response.json();
+        throw new Error(data.error || "Login failed");
       }
 
       const data = await response.json();
@@ -52,7 +53,8 @@ export function useAuth() {
       });
 
       if (!response.ok) {
-        throw new Error("Registration failed");
+        const data = await response.json();
+        throw new Error(data.error || "Registration failed");
       }
 
       const data = await response.json();

@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "../hooks/use-auth";
 
 const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),
@@ -32,6 +33,7 @@ type LoginForm = z.infer<typeof loginSchema>;
 export function Login() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const { login } = useAuth();
   
   const form = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
@@ -43,17 +45,13 @@ export function Login() {
 
   const onSubmit = async (data: LoginForm) => {
     try {
-      // TODO: Implement login logic
-      toast({
-        title: "Success",
-        description: "Logged in successfully",
-      });
+      await login(data.username, data.password);
       navigate("/prompts");
     } catch (error) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to login",
+        description: error instanceof Error ? error.message : "Login failed",
       });
     }
   };
@@ -104,7 +102,7 @@ export function Login() {
               <p className="text-sm text-muted-foreground">
                 Don't have an account?{" "}
                 <Link href="/register">
-                  <a className="text-primary hover:underline">Register</a>
+                  <Button variant="link" className="p-0">Register</Button>
                 </Link>
               </p>
             </CardFooter>

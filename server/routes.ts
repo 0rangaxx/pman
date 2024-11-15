@@ -58,12 +58,12 @@ export function registerRoutes(app: Express) {
       
       const [user] = await db.select().from(users).where(eq(users.username, username));
       if (!user) {
-        return res.status(401).json({ error: "Invalid credentials" });
+        return res.status(401).json({ error: "Invalid username or password" });
       }
 
       const validPassword = await bcrypt.compare(password, user.password);
       if (!validPassword) {
-        return res.status(401).json({ error: "Invalid credentials" });
+        return res.status(401).json({ error: "Invalid username or password" });
       }
 
       const token = jwt.sign(

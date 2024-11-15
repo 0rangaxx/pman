@@ -21,10 +21,10 @@ export function Home() {
   };
 
   return (
-    <div className="h-screen flex flex-col">
-      <header className="border-b p-4">
+    <div className="h-screen flex flex-col bg-background dark:bg-background">
+      <header className="border-b p-4 bg-background dark:bg-background">
         <div className="container flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Prompt Manager</h1>
+          <h1 className="text-2xl font-bold text-foreground dark:text-foreground">Prompt Manager</h1>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="flex items-center gap-2">
@@ -46,7 +46,7 @@ export function Home() {
           </DropdownMenu>
         </div>
       </header>
-      <main className="flex-1">
+      <main className="flex-1 bg-background dark:bg-background">
         <PromptPanel />
       </main>
     </div>

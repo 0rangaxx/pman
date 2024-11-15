@@ -23,7 +23,7 @@ createRoot(document.getElementById("root")!).render(
             <Home />
           </AuthGuard>
         </Route>
-        <Route>404 Page Not Found</Route>
+        <Route>Page Not Found</Route>
       </Switch>
       <Toaster />
     </SWRConfig>

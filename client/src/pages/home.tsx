@@ -6,9 +6,10 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Settings as SettingsIcon, LogOut } from "lucide-react";
 
 export function Home() {
   const { user, logout } = useAuth();
@@ -32,7 +33,13 @@ export function Home() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={handleLogout}>
+              <DropdownMenuItem onClick={() => navigate("/settings")} className="flex items-center gap-2">
+                <SettingsIcon className="h-4 w-4" />
+                Settings
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleLogout} className="flex items-center gap-2">
+                <LogOut className="h-4 w-4" />
                 Logout
               </DropdownMenuItem>
             </DropdownMenuContent>

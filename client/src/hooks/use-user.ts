@@ -21,7 +21,16 @@ interface UseUser {
 }
 
 export function useUser(): UseUser {
-  const { data: user, error, mutate } = useSWR<User | null>("/api/auth/user");
+  const { data: user, error, mutate } = useSWR<User | null>("/api/auth/user", {
+    onSuccess: (data) => {
+      console.log('User data fetched:', data ? 'authenticated' : 'not authenticated');
+    },
+    onError: (err) => {
+      console.error('Error fetching user:', err);
+    }
+  });
+
+  console.log('useUser hook state:', { user, isLoading: !error && !user, isError: !!error });
 
   const login = useCallback(
     async (data: LoginData) => {

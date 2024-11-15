@@ -9,6 +9,7 @@ import { Home } from "./pages/home";
 import { Landing } from "./pages/landing";
 import { Login } from "./pages/login";
 import { Register } from "./pages/register";
+import { Settings } from "./pages/settings";
 import { AuthGuard } from "./components/auth-guard";
 
 createRoot(document.getElementById("root")!).render(
@@ -21,6 +22,11 @@ createRoot(document.getElementById("root")!).render(
         <Route path="/prompts">
           <AuthGuard>
             <Home />
+          </AuthGuard>
+        </Route>
+        <Route path="/settings">
+          <AuthGuard>
+            <Settings />
           </AuthGuard>
         </Route>
         <Route>Page Not Found</Route>

@@ -99,6 +99,59 @@ export function registerRoutes(app: Express) {
     res.json(req.user);
   });
 
+  app.put("/api/user/settings", authenticateToken, async (req, res) => {
+    try {
+      const { username, currentPassword, newPassword } = req.body;
+      const userId = req.user?.id;
+
+      if (!userId) {
+        return res.status(401).json({ error: "User not found" });
+      }
+
+      // Get current user
+      const [user] = await db.select().from(users).where(eq(users.id, userId));
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Verify current password
+      const validPassword = await bcrypt.compare(currentPassword, user.password);
+      if (!validPassword) {
+        return res.status(401).json({ error: "Current password is incorrect" });
+      }
+
+      // Check if new username is taken (if username is being changed)
+      if (username !== user.username) {
+        const existingUser = await db.select().from(users).where(eq(users.username, username));
+        if (existingUser.length > 0) {
+          return res.status(400).json({ error: "Username already exists" });
+        }
+      }
+
+      // Hash new password if provided
+      const hashedPassword = newPassword ? await bcrypt.hash(newPassword, 10) : user.password;
+
+      // Update user
+      const [updatedUser] = await db
+        .update(users)
+        .set({
+          username,
+          password: hashedPassword,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, userId))
+        .returning();
+
+      res.json({ 
+        message: "Settings updated successfully",
+        user: { id: updatedUser.id, username: updatedUser.username }
+      });
+    } catch (error) {
+      console.error('Settings update error:', error);
+      res.status(500).json({ error: "Failed to update settings" });
+    }
+  });
+
   // Health check endpoint
   app.get("/api/health", (_req, res) => {
     res.json({ status: "healthy" });

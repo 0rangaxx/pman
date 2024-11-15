@@ -226,9 +226,11 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
   };
 
   return (
-    <Card className="w-full">
+    <Card className="w-full bg-background/95 dark:bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <CardHeader>
-        <CardTitle>{prompt ? "Edit Prompt" : "Create New Prompt"}</CardTitle>
+        <CardTitle className="text-foreground dark:text-foreground/90">
+          {prompt ? "Edit Prompt" : "Create New Prompt"}
+        </CardTitle>
         <CardDescription>
           {prompt ? "Update the existing prompt" : "Create a new prompt with the form below"}
         </CardDescription>
@@ -241,9 +243,9 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
               name="title"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Title</FormLabel>
+                  <FormLabel className="text-foreground dark:text-foreground/90">Title</FormLabel>
                   <FormControl>
-                    <Input {...field} maxLength={100} />
+                    <Input {...field} maxLength={100} className="dark:bg-background/80 dark:border-border" />
                   </FormControl>
                   <FormDescription>
                     Enter a descriptive title for your prompt
@@ -258,10 +260,10 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
               name="content"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Content</FormLabel>
+                  <FormLabel className="text-foreground dark:text-foreground/90">Content</FormLabel>
                   <div className="flex gap-2">
                     <FormControl className="flex-1">
-                      <Textarea {...field} className="min-h-[200px]" maxLength={2000} />
+                      <Textarea {...field} className="min-h-[200px] dark:bg-background/80 dark:border-border" maxLength={2000} />
                     </FormControl>
                     <div className="flex flex-col gap-2">
                       <Button
@@ -270,7 +272,7 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
                         size="icon"
                         onClick={handleFormatContent}
                         disabled={isFormatting}
-                        className="self-start"
+                        className="self-start dark:bg-background/80 dark:border-border"
                       >
                         <Wand2 className={`h-4 w-4 ${isFormatting ? 'animate-spin' : ''}`} />
                       </Button>
@@ -279,7 +281,7 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
                         variant="outline"
                         size="icon"
                         onClick={handleCopyContent}
-                        className="self-start"
+                        className="self-start dark:bg-background/80 dark:border-border"
                       >
                         <Copy className="h-4 w-4" />
                       </Button>
@@ -303,8 +305,9 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
                       checked={field.value || false}
                       onCheckedChange={field.onChange}
                       id="isLiked"
+                      className="dark:bg-background/80 dark:border-border"
                     />
-                    <Label htmlFor="isLiked" className="flex items-center gap-2">
+                    <Label htmlFor="isLiked" className="flex items-center gap-2 dark:text-foreground/90">
                       <Heart className="h-4 w-4" />
                       お気に入り
                     </Label>
@@ -321,8 +324,9 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
                       checked={field.value || false}
                       onCheckedChange={field.onChange}
                       id="isNsfw"
+                      className="dark:bg-background/80 dark:border-border"
                     />
-                    <Label htmlFor="isNsfw" className="flex items-center gap-2">
+                    <Label htmlFor="isNsfw" className="flex items-center gap-2 dark:text-foreground/90">
                       <ShieldAlert className="h-4 w-4" />
                       NSFW
                     </Label>
@@ -332,16 +336,17 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
             </div>
 
             <FormItem>
-              <FormLabel>Tags</FormLabel>
+              <FormLabel className="text-foreground dark:text-foreground/90">Tags</FormLabel>
               <div className="flex flex-wrap gap-2 mb-2">
                 {tags.map((tag: string) => (
-                  <Badge key={tag} variant="secondary">
+                  <Badge key={tag} variant="secondary" className="dark:bg-background/80 dark:border-border">
                     {tag}
                     <Button
                       variant="ghost"
                       size="sm"
                       className="h-4 w-4 p-0 ml-2"
                       onClick={() => handleRemoveTag(tag)}
+                      className="dark:bg-background/80 dark:border-border"
                     >
                       <X className="h-3 w-3" />
                     </Button>
@@ -354,6 +359,7 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
                 onChange={(e) => setNewTag(e.target.value)}
                 onKeyDown={handleAddTag}
                 maxLength={50}
+                className="dark:bg-background/80 dark:border-border"
               />
               <FormDescription>
                 Press Enter to add a new tag. Tags help organize your prompts.
@@ -361,20 +367,21 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
             </FormItem>
 
             <FormItem>
-              <FormLabel>Metadata</FormLabel>
+              <FormLabel className="text-foreground dark:text-foreground/90">Metadata</FormLabel>
               <div className="space-y-2">
                 {Object.entries(metadata).map(([key, value]) => (
                   <div
                     key={key}
-                    className="flex items-center gap-2 p-2 rounded-md border"
+                    className="flex items-center gap-2 p-2 rounded-md border dark:bg-background/80 dark:border-border"
                   >
-                    <span className="font-medium">{key}:</span>
-                    <span>{value as string}</span>
+                    <span className="font-medium dark:text-foreground/90">{key}:</span>
+                    <span className="dark:text-foreground/90">{value as string}</span>
                     <Button
                       variant="ghost"
                       size="sm"
                       className="ml-auto"
                       onClick={() => handleRemoveMetadata(key)}
+                      className="dark:bg-background/80 dark:border-border"
                     >
                       <X className="h-4 w-4" />
                     </Button>
@@ -386,17 +393,20 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
                     value={newMetadataKey}
                     onChange={(e) => setNewMetadataKey(e.target.value)}
                     maxLength={50}
+                    className="dark:bg-background/80 dark:border-border"
                   />
                   <Input
                     placeholder="Value"
                     value={newMetadataValue}
                     onChange={(e) => setNewMetadataValue(e.target.value)}
                     maxLength={100}
+                    className="dark:bg-background/80 dark:border-border"
                   />
                   <Button
                     type="button"
                     variant="secondary"
                     onClick={handleAddMetadata}
+                    className="dark:bg-background/80 dark:border-border"
                   >
                     <Plus className="h-4 w-4" />
                   </Button>
@@ -410,7 +420,7 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
             {showDeleteConfirm && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
-                <p>Are you sure you want to delete this prompt? This action cannot be undone.</p>
+                <p className="dark:text-foreground/90">Are you sure you want to delete this prompt? This action cannot be undone.</p>
               </Alert>
             )}
           </CardContent>
@@ -422,6 +432,7 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
                 variant="destructive"
                 onClick={handleDelete}
                 disabled={isSubmitting}
+                className="dark:bg-background/80 dark:border-border"
               >
                 {isSubmitting ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -432,7 +443,7 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
                 )}
               </Button>
             )}
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting} className="dark:bg-background/80 dark:border-border">
               {isSubmitting ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : prompt ? (

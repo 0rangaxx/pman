@@ -40,6 +40,7 @@ export function useAuth() {
       await mutate(data.user);
       return data.user;
     } catch (error) {
+      console.error('Login error:', error);
       throw error;
     }
   }, [setAuthState, mutate]);

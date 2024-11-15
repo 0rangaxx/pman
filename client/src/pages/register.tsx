@@ -119,12 +119,12 @@ export function Register() {
               <Button type="submit" className="w-full">
                 Register
               </Button>
-              <p className="text-sm text-muted-foreground">
+              <div className="text-sm text-muted-foreground">
                 Already have an account?{" "}
-                <Link href="/login">
-                  <a className="text-primary hover:underline">Login</a>
-                </Link>
-              </p>
+                <Button variant="link" className="p-0" onClick={() => navigate("/login")}>
+                  Login
+                </Button>
+              </div>
             </CardFooter>
           </form>
         </Form>

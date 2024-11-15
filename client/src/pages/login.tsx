@@ -1,7 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Link, useLocation } from "wouter";
+import { useLocation } from "wouter";
 import {
   Card,
   CardContent,
@@ -99,12 +99,12 @@ export function Login() {
               <Button type="submit" className="w-full">
                 Login
               </Button>
-              <p className="text-sm text-muted-foreground">
+              <div className="text-sm text-muted-foreground">
                 Don't have an account?{" "}
-                <Link href="/register">
-                  <Button variant="link" className="p-0">Register</Button>
-                </Link>
-              </p>
+                <Button variant="link" className="p-0" onClick={() => navigate("/register")}>
+                  Register
+                </Button>
+              </div>
             </CardFooter>
           </form>
         </Form>

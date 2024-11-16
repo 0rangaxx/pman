@@ -87,6 +87,14 @@ export function Settings() {
 
   return (
     <div className="container max-w-2xl py-8">
+      <div className="flex items-center gap-2 mb-4">
+        <Button
+          variant="outline"
+          onClick={() => navigate("/prompts")}
+        >
+          Back to Prompts
+        </Button>
+      </div>
       <Card>
         <CardHeader>
           <CardTitle>Account Settings</CardTitle>

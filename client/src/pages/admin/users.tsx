@@ -139,7 +139,16 @@ export function Users() {
 
   return (
     <div className="container py-8">
-      <h1 className="text-2xl font-bold mb-4">User Management</h1>
+      <div className="flex items-center gap-4 mb-4">
+        <Button
+          variant="outline"
+          onClick={() => navigate("/prompts")}
+        >
+          Back to Prompts
+        </Button>
+        <h1 className="text-2xl font-bold">User Management</h1>
+      </div>
+      
       {loading ? (
         <div className="flex justify-center items-center p-8">
           <Loader2 className="h-8 w-8 animate-spin" />

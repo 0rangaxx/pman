@@ -23,7 +23,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "../hooks/use-auth";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 
 const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),
@@ -37,6 +37,7 @@ export function Login() {
   const { toast } = useToast();
   const { login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   
   const form = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
@@ -48,6 +49,7 @@ export function Login() {
 
   const onSubmit = async (data: LoginForm) => {
     try {
+      setIsLoading(true);
       await login(data.username, data.password);
       navigate("/prompts");
     } catch (error) {
@@ -56,6 +58,8 @@ export function Login() {
         title: "Error",
         description: error instanceof Error ? error.message : "Login failed",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -78,7 +82,7 @@ export function Login() {
                   <FormItem>
                     <FormLabel>Username</FormLabel>
                     <FormControl>
-                      <Input {...field} type="text" />
+                      <Input {...field} type="text" disabled={isLoading} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -95,6 +99,7 @@ export function Login() {
                         <Input 
                           {...field} 
                           type={showPassword ? "text" : "password"}
+                          disabled={isLoading}
                         />
                         <Button
                           type="button"
@@ -102,6 +107,7 @@ export function Login() {
                           size="sm"
                           className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                           onClick={() => setShowPassword(!showPassword)}
+                          disabled={isLoading}
                         >
                           {showPassword ? (
                             <EyeOff className="h-4 w-4" />
@@ -117,12 +123,24 @@ export function Login() {
               />
             </CardContent>
             <CardFooter className="flex-col space-y-2">
-              <Button type="submit" className="w-full">
-                Login
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Logging in...
+                  </>
+                ) : (
+                  "Login"
+                )}
               </Button>
               <div className="text-sm text-muted-foreground">
                 Don't have an account?{" "}
-                <Button variant="link" className="p-0" onClick={() => navigate("/register")}>
+                <Button 
+                  variant="link" 
+                  className="p-0" 
+                  onClick={() => navigate("/register")}
+                  disabled={isLoading}
+                >
                   Register
                 </Button>
               </div>

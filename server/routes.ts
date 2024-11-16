@@ -45,10 +45,11 @@ export function registerRoutes(app: Express) {
       const [user] = await db.insert(users).values({
         username,
         password: hashedPassword,
+        isAdmin: false, // Default to false for new users
       }).returning();
 
       console.log('User registered successfully:', user.id);
-      res.json({ user: { id: user.id, username: user.username } });
+      res.json({ user: { id: user.id, username: user.username, isAdmin: user.isAdmin } });
     } catch (error) {
       console.error('Registration error:', error);
       res.status(500).json({ error: "Registration failed" });
@@ -70,7 +71,7 @@ export function registerRoutes(app: Express) {
       }
 
       const token = jwt.sign(
-        { id: user.id, username: user.username },
+        { id: user.id, username: user.username, isAdmin: user.isAdmin },
         JWT_SECRET,
         { expiresIn: "24h" }
       );
@@ -81,7 +82,7 @@ export function registerRoutes(app: Express) {
       });
 
       res.json({
-        user: { id: user.id, username: user.username },
+        user: { id: user.id, username: user.username, isAdmin: user.isAdmin },
         token,
       });
     } catch (error) {
@@ -144,7 +145,7 @@ export function registerRoutes(app: Express) {
 
       res.json({ 
         message: "Settings updated successfully",
-        user: { id: updatedUser.id, username: updatedUser.username }
+        user: { id: updatedUser.id, username: updatedUser.username, isAdmin: updatedUser.isAdmin }
       });
     } catch (error) {
       console.error('Settings update error:', error);

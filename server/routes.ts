@@ -100,6 +100,25 @@ export function registerRoutes(app: Express) {
     res.json(req.user);
   });
 
+  app.get("/api/users", authenticateToken, async (req, res) => {
+    if (!req.user?.isAdmin) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    
+    try {
+      const usersList = await db.select({
+        id: users.id,
+        username: users.username,
+        isAdmin: users.isAdmin,
+        createdAt: users.createdAt
+      }).from(users);
+      res.json(usersList);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      res.status(500).json({ error: "Failed to fetch users" });
+    }
+  });
+
   app.put("/api/user/settings", authenticateToken, async (req, res) => {
     try {
       const { username, currentPassword, newPassword } = req.body;

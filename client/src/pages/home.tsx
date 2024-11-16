@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown, Settings as SettingsIcon, LogOut } from "lucide-react";
+import { ChevronDown, Settings as SettingsIcon, LogOut, Users } from "lucide-react";
 
 export function Home() {
   const { user, logout } = useAuth();
@@ -37,6 +37,15 @@ export function Home() {
                 <SettingsIcon className="h-4 w-4" />
                 Settings
               </DropdownMenuItem>
+              {user?.isAdmin && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate("/admin/users")} className="flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    User Management
+                  </DropdownMenuItem>
+                </>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout} className="flex items-center gap-2">
                 <LogOut className="h-4 w-4" />

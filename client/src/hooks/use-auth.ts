@@ -1,7 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { useLocalStorage } from "./use-local-storage";
 import useSWR from "swr";
-import type { User } from "db/schema";
+
+interface User {
+  id: number;
+  username: string;
+  isAdmin: boolean;
+}
 
 interface AuthState {
   user: User | null;

@@ -31,6 +31,68 @@ function authenticateToken(req: any, res: any, next: any) {
 }
 
 export function registerRoutes(app: Express) {
+  // ... existing routes ...
+
+  app.put("/api/users/:id/toggle-admin", authenticateToken, async (req, res) => {
+    try {
+      if (!req.user?.isAdmin) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const userId = parseInt(req.params.id);
+      if (userId === req.user.id) {
+        return res.status(400).json({ error: "Cannot modify your own admin status" });
+      }
+
+      const [user] = await db.select().from(users).where(eq(users.id, userId));
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const [updatedUser] = await db
+        .update(users)
+        .set({ 
+          isAdmin: !user.isAdmin,
+          updatedAt: new Date()
+        })
+        .where(eq(users.id, userId))
+        .returning();
+
+      res.json({ 
+        message: `Admin status ${updatedUser.isAdmin ? 'granted' : 'revoked'} successfully`,
+        user: updatedUser 
+      });
+    } catch (error) {
+      console.error('Toggle admin error:', error);
+      res.status(500).json({ error: "Failed to update admin status" });
+    }
+  });
+
+  app.delete("/api/users/:id", authenticateToken, async (req, res) => {
+    try {
+      if (!req.user?.isAdmin) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const userId = parseInt(req.params.id);
+      if (userId === req.user.id) {
+        return res.status(400).json({ error: "Cannot delete your own account" });
+      }
+
+      const [user] = await db.select().from(users).where(eq(users.id, userId));
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      await db.delete(users).where(eq(users.id, userId));
+
+      res.json({ message: "User deleted successfully" });
+    } catch (error) {
+      console.error('Delete user error:', error);
+      res.status(500).json({ error: "Failed to delete user" });
+    }
+  });
+
   app.post("/api/register", async (req, res) => {
     try {
       const { username, password } = req.body;

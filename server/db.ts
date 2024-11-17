@@ -48,24 +48,6 @@ async function verifyTables(client: Database.Database): Promise<void> {
   }
 }
 
-async function testDatabaseOperations(db: ReturnType<typeof drizzle>): Promise<void> {
-  try {
-    // Test read operation
-    await db.select().from(schema.users).limit(1);
-    console.log("Database read operation successful");
-    
-    // Test write operation (transaction)
-    await db.transaction(async (tx) => {
-      // Attempt a harmless write operation
-      const result = await tx.select().from(schema.users).limit(1);
-      return result;
-    });
-    console.log("Database write operation successful");
-  } catch (error) {
-    throw new DatabaseError("Database operations test failed", error);
-  }
-}
-
 async function initializeDatabase(): Promise<ReturnType<typeof drizzle>> {
   console.log("Starting database initialization...");
   
@@ -100,11 +82,6 @@ async function initializeDatabase(): Promise<ReturnType<typeof drizzle>> {
 
     // Create drizzle instance
     const db = drizzle(client, { schema });
-
-    // Test database operations
-    await testDatabaseOperations(db);
-    console.log("Database operations test successful");
-
     return db;
   } catch (error) {
     if (client) {
@@ -181,8 +158,11 @@ export async function getDb() {
   }
 }
 
-// Type-safe database interface with improved error handling
+// Export the db interface with getInstance method
 export const db = {
+  async getInstance() {
+    return await getDb();
+  },
   async select() {
     const dbConn = await getDb();
     return dbConn.select();

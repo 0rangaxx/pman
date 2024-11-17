@@ -1,0 +1,44 @@
+[2024-11-17T11:45:06.987Z] (152652ms) POST /api/login - 500 (9ms)
+select "id", "username", "password", "is_admin", "created_at", "updated_at" from "users" limit 1.0
+Registering user: admin
+Registration error: TypeError: db.select(...).from is not a function
+    at <anonymous> (/home/runner/PromptPalette/server/routes.ts:209:46)
+    at Layer.handle [as handle_request] (/home/runner/PromptPalette/node_modules/express/lib/router/layer.js:95:5)
+    at next (/home/runner/PromptPalette/node_modules/express/lib/router/route.js:149:13)
+    at Route.dispatch (/home/runner/PromptPalette/node_modules/express/lib/router/route.js:119:3)
+    at Layer.handle [as handle_request] (/home/runner/PromptPalette/node_modules/express/lib/router/layer.js:95:5)
+    at /home/runner/PromptPalette/node_modules/express/lib/router/index.js:284:15
+    at Function.process_params (/home/runner/PromptPalette/node_modules/express/lib/router/index.js:346:12)
+    at next (/home/runner/PromptPalette/node_modules/express/lib/router/index.js:280:10)
+    at <anonymous> (/home/runner/PromptPalette/server/index.ts:58:3)
+    at Layer.handle [as handle_request] (/home/runner/PromptPalette/node_modules/express/lib/router/layer.js:95:5)
+    at trim_prefix (/home/runner/PromptPalette/node_modules/express/lib/router/index.js:328:13)
+    at /home/runner/PromptPalette/node_modules/express/lib/router/index.js:286:9
+    at Function.process_params (/home/runner/PromptPalette/node_modules/express/lib/router/index.js:346:12)
+    at next (/home/runner/PromptPalette/node_modules/express/lib/router/index.js:280:10)
+    at <anonymous> (/home/runner/PromptPalette/server/index.ts:36:3)
+    at Layer.handle [as handle_request] (/home/runner/PromptPalette/node_modules/express/lib/router/layer.js:95:5)
+    at trim_prefix (/home/runner/PromptPalette/node_modules/express/lib/router/index.js:328:13)
+    at /home/runner/PromptPalette/node_modules/express/lib/router/index.js:286:9
+    at Function.process_params (/home/runner/PromptPalette/node_modules/express/lib/router/index.js:346:12)
+    at next (/home/runner/PromptPalette/node_modules/express/lib/router/index.js:280:10)
+    at cookieParser (/home/runner/PromptPalette/node_modules/cookie-parser/index.js:71:5)
+    at Layer.handle [as handle_request] (/home/runner/PromptPalette/node_modules/express/lib/router/layer.js:95:5)
+    at trim_prefix (/home/runner/PromptPalette/node_modules/express/lib/router/index.js:328:13)
+    at /home/runner/PromptPalette/node_modules/express/lib/router/index.js:286:9
+    at Function.process_params (/home/runner/PromptPalette/node_modules/express/lib/router/index.js:346:12)
+    at next (/home/runner/PromptPalette/node_modules/express/lib/router/index.js:280:10)
+    at urlencodedParser (/home/runner/PromptPalette/node_modules/body-parser/lib/types/urlencoded.js:85:7)
+    at Layer.handle [as handle_request] (/home/runner/PromptPalette/node_modules/express/lib/router/layer.js:95:5)
+    at trim_prefix (/home/runner/PromptPalette/node_modules/express/lib/router/index.js:328:13)
+    at /home/runner/PromptPalette/node_modules/express/lib/router/index.js:286:9
+    at Function.process_params (/home/runner/PromptPalette/node_modules/express/lib/router/index.js:346:12)
+    at next (/home/runner/PromptPalette/node_modules/express/lib/router/index.js:280:10)
+    at /home/runner/PromptPalette/node_modules/body-parser/lib/read.js:137:5
+    at AsyncResource.runInAsyncScope (node:async_hooks:206:9)
+    at invokeCallback (/home/runner/PromptPalette/node_modules/raw-body/index.js:238:16)
+    at done (/home/runner/PromptPalette/node_modules/raw-body/index.js:227:7)
+    at IncomingMessage.onEnd (/home/runner/PromptPalette/node_modules/raw-body/index.js:287:7)
+    at IncomingMessage.emit (node:events:519:28)
+    at endReadableNT (node:internal/streams/readable:1696:12)
+    at process.processTicksAndRejections (node:internal/process/task_queues:82:21)

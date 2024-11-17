@@ -1,10 +1,10 @@
 import { type Express } from "express";
-import { eq } from "drizzle-orm";
+import { eq, or, and, ne } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { db } from "./db";
-import { users } from "../db/schema";
-import type { User } from "../db/schema";
+import { users, prompts } from "../db/schema";
+import type { User, Prompt } from "../db/schema";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 
@@ -31,8 +31,116 @@ function authenticateToken(req: any, res: any, next: any) {
 }
 
 export function registerRoutes(app: Express) {
-  // ... existing routes ...
+  // Prompt routes
+  app.get("/api/prompts", authenticateToken, async (req, res) => {
+    try {
+      // Get all prompts that are either:
+      // 1. Owned by the current user (regardless of private status)
+      // 2. Public prompts (isPrivate = false) from other users
+      const promptsList = await db
+        .select()
+        .from(prompts)
+        .where(
+          or(
+            eq(prompts.userId, req.user!.id),
+            and(
+              eq(prompts.isPrivate, false),
+              ne(prompts.userId, req.user!.id)
+            )
+          )
+        );
+      res.json(promptsList);
+    } catch (error) {
+      console.error('Error fetching prompts:', error);
+      res.status(500).json({ error: "Failed to fetch prompts" });
+    }
+  });
 
+  app.post("/api/prompts", authenticateToken, async (req, res) => {
+    try {
+      const { title, content, tags, metadata, isLiked, isNsfw, isPrivate } = req.body;
+      const [prompt] = await db.insert(prompts).values({
+        title,
+        content,
+        tags,
+        metadata,
+        isLiked,
+        isNsfw,
+        isPrivate: isPrivate ?? false, // デフォルトはfalse（公開）
+        userId: req.user!.id,
+      }).returning();
+      res.json(prompt);
+    } catch (error) {
+      console.error('Error creating prompt:', error);
+      res.status(500).json({ error: "Failed to create prompt" });
+    }
+  });
+
+  app.put("/api/prompts/:id", authenticateToken, async (req, res) => {
+    try {
+      const promptId = parseInt(req.params.id);
+      const { title, content, tags, metadata, isLiked, isNsfw, isPrivate } = req.body;
+
+      // Verify ownership
+      const [existingPrompt] = await db.select()
+        .from(prompts)
+        .where(eq(prompts.id, promptId));
+
+      if (!existingPrompt) {
+        return res.status(404).json({ error: "Prompt not found" });
+      }
+
+      if (existingPrompt.userId !== req.user!.id) {
+        return res.status(403).json({ error: "Not authorized to update this prompt" });
+      }
+
+      const [updatedPrompt] = await db.update(prompts)
+        .set({
+          title,
+          content,
+          tags,
+          metadata,
+          isLiked,
+          isNsfw,
+          isPrivate,
+          updatedAt: new Date().toISOString(),
+        })
+        .where(eq(prompts.id, promptId))
+        .returning();
+
+      res.json(updatedPrompt);
+    } catch (error) {
+      console.error('Error updating prompt:', error);
+      res.status(500).json({ error: "Failed to update prompt" });
+    }
+  });
+
+  app.delete("/api/prompts/:id", authenticateToken, async (req, res) => {
+    try {
+      const promptId = parseInt(req.params.id);
+
+      // Verify ownership
+      const [existingPrompt] = await db.select()
+        .from(prompts)
+        .where(eq(prompts.id, promptId));
+
+      if (!existingPrompt) {
+        return res.status(404).json({ error: "Prompt not found" });
+      }
+
+      if (existingPrompt.userId !== req.user!.id) {
+        return res.status(403).json({ error: "Not authorized to delete this prompt" });
+      }
+
+      await db.delete(prompts).where(eq(prompts.id, promptId));
+      res.json({ message: "Prompt deleted successfully" });
+    } catch (error) {
+      console.error('Error deleting prompt:', error);
+      res.status(500).json({ error: "Failed to delete prompt" });
+    }
+  });
+
+  // User routes
   app.put("/api/users/:id/toggle-admin", authenticateToken, async (req, res) => {
     try {
       if (!req.user?.isAdmin) {
@@ -51,16 +159,16 @@ export function registerRoutes(app: Express) {
 
       const [updatedUser] = await db
         .update(users)
-        .set({ 
+        .set({
           isAdmin: !user.isAdmin,
-          updatedAt: new Date()
+          updatedAt: new Date().toISOString()
         })
         .where(eq(users.id, userId))
         .returning();
 
-      res.json({ 
+      res.json({
         message: `Admin status ${updatedUser.isAdmin ? 'granted' : 'revoked'} successfully`,
-        user: updatedUser 
+        user: updatedUser
       });
     } catch (error) {
       console.error('Toggle admin error:', error);
@@ -97,7 +205,7 @@ export function registerRoutes(app: Express) {
     try {
       const { username, password } = req.body;
       console.log('Registering user:', username);
-      
+
       const existingUser = await db.select().from(users).where(eq(users.username, username));
       if (existingUser.length > 0) {
         return res.status(400).json({ error: "Username already exists" });
@@ -121,7 +229,7 @@ export function registerRoutes(app: Express) {
   app.post("/api/login", async (req, res) => {
     try {
       const { username, password } = req.body;
-      
+
       const [user] = await db.select().from(users).where(eq(users.username, username));
       if (!user) {
         return res.status(401).json({ error: "Invalid username or password" });
@@ -166,7 +274,7 @@ export function registerRoutes(app: Express) {
     if (!req.user?.isAdmin) {
       return res.status(403).json({ error: "Admin access required" });
     }
-    
+
     try {
       const usersList = await db.select({
         id: users.id,
@@ -219,12 +327,12 @@ export function registerRoutes(app: Express) {
         .set({
           username,
           password: hashedPassword,
-          updatedAt: new Date(),
+          updatedAt: new Date().toISOString(),
         })
         .where(eq(users.id, userId))
         .returning();
 
-      res.json({ 
+      res.json({
         message: "Settings updated successfully",
         user: { id: updatedUser.id, username: updatedUser.username, isAdmin: updatedUser.isAdmin }
       });

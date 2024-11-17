@@ -54,7 +54,7 @@ export function SearchBar({ criteria, onCriteriaChange, availableTags }: SearchB
           <Input
             placeholder="Search prompts..."
             value={criteria.query}
-            onChange={(e) => 
+            onChange={(e) =>
               onCriteriaChange({ ...criteria, query: e.target.value })
             }
             className="pl-8"

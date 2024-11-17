@@ -1,132 +1,132 @@
-# Prompt Palette (プロンプトパレット)
+# Prompt Palette
 
-プロンプト管理システムは、AIプロンプトを効率的に管理・整理するためのツールです。
+A prompt management system that efficiently organizes and manages AI prompts.
 
-## 特徴 ✨
+## Features ✨
 
-- 📝 デュアルパネルインターフェース
-  - プロンプトの閲覧と編集を同時に行える効率的なレイアウト
-  - リアルタイムプレビュー機能
-- 🔍 高度な検索機能
-  - タイトル、内容、タグ、メタデータの複合検索
-  - 大文字・小文字の区別オプション
-  - 特殊文字対応の検索機能
-- 🏷️ スマートな整理機能
-  - タグベースの管理システム
-  - 日付範囲によるフィルタリング
-  - お気に入りとNSFWフラグ
-- 🔄 リアルタイムUI更新
-  - 即時の変更反映
-  - スムーズな操作性
-- 👥 ユーザー管理
-  - セキュアな認証システム
-  - 管理者権限機能
-- ⚙️ カスタマイズ可能な設定
-  - プロフィール管理
-  - パスワード変更機能
-- 🔐 セキュリティ対策
-  - XSS対策
-  - 入力検証
-  - 保護されたルート
+- 📝 Dual-Panel Interface
+  - Efficient layout for simultaneous viewing and editing
+  - Real-time preview functionality
+- 🔍 Advanced Search
+  - Combined search across titles, content, tags, and metadata
+  - Case-sensitive option
+  - Special character support
+- 🏷️ Smart Organization
+  - Tag-based management system
+  - Date range filtering
+  - Like and NSFW flags
+- 🔄 Real-time UI Updates
+  - Immediate change reflection
+  - Smooth operation
+- 👥 User Management
+  - Secure authentication system
+  - Admin privileges
+- ⚙️ Customizable Settings
+  - Profile management
+  - Password management
+- 🔐 Security Features
+  - XSS protection
+  - Input validation
+  - Protected routes
 
-## セットアップ手順 🚀
+## Setup Instructions 🚀
 
-1. リポジトリのクローン:
+1. Clone the repository:
 ```bash
 git clone <repository-url>
 cd prompt-palette
 ```
 
-2. 依存関係のインストール:
+2. Install dependencies:
 ```bash
 npm install
 ```
 
-3. データベースのセットアップ:
+3. Setup database:
 ```bash
 npm run db:push
 ```
 
-4. 環境変数の設定:
-以下の環境変数を設定してください：
-- `JWT_SECRET`: JWTトークン生成用のシークレットキー
+4. Configure environment variables:
+Required environment variables:
+- `JWT_SECRET`: Secret key for JWT token generation
 
-5. アプリケーションの起動:
+5. Start the application:
 ```bash
 npm run dev
 ```
 
-## 使い方 📖
+## Usage Guide 📖
 
-### ユーザー登録・ログイン
-1. トップページの「Register」ボタンをクリックして新規アカウントを作成
-2. ユーザー名とパスワードを入力して登録
-3. 登録後、ログインページでクレデンシャルを入力してログイン
+### User Registration & Login
+1. Click "Register" on the landing page to create a new account
+2. Enter username and password
+3. After registration, log in with your credentials
 
-### プロンプトの管理
-1. **プロンプトの作成**
-   - 「+」ボタンをクリックして新規プロンプト作成
-   - タイトル、内容、タグ、メタデータを入力
-   - お気に入りやNSFWフラグを設定可能
+### Prompt Management
+1. **Creating Prompts**
+   - Click the "+" button to create a new prompt
+   - Enter title, content, tags, and metadata
+   - Set Like/NSFW flags as needed
 
-2. **検索と絞り込み**
-   - テキスト検索: タイトル、内容、タグ、メタデータから検索
-   - タグフィルター: 特定のタグで絞り込み
-   - 日付範囲: 作成日で絞り込み
-   - フラグフィルター: お気に入り/NSFWで絞り込み
+2. **Search & Filter**
+   - Text search: Search across titles, content, tags, metadata
+   - Tag filters: Filter by specific tags
+   - Date range: Filter by creation date
+   - Flag filters: Filter by Like/NSFW status
 
-3. **プロンプトの編集**
-   - プロンプトをクリックして編集モードを開始
-   - 内容を更新し、「Update」ボタンで保存
-   - 「Format」ボタンでテキストを整形
-   - 「Copy」ボタンで内容をクリップボードにコピー
+3. **Editing Prompts**
+   - Click a prompt to enter edit mode
+   - Update content and click "Update" to save
+   - Use "Format" button to format text
+   - Use "Copy" button to copy content
 
-### アカウント設定
-1. ヘッダーのユーザー名をクリックしてドロップダウンメニューを表示
-2. 「Settings」を選択して設定ページにアクセス
-3. ユーザー名やパスワードを変更可能
+### Account Settings
+1. Click username in header to open dropdown menu
+2. Select "Settings" to access account settings
+3. Update username or password
 
-### 管理者機能
-管理者アカウントでは以下の機能が利用可能：
-1. ユーザー管理ページへのアクセス
-2. ユーザーの管理者権限の付与/剥奪
-3. ユーザーアカウントの削除
+### Admin Features
+Admin accounts can access:
+1. User management page
+2. Grant/revoke admin privileges
+3. Delete user accounts
 
-## セキュリティ機能 🔒
+## Security Features 🔒
 
-- XSS対策済み
-- 入力バリデーション実装
-- パスワードの安全な保存（bcrypt）
-- JWTによる認証
-- 保護されたルーティング
-- サニタイズ処理による特殊文字の安全な取り扱い
+- XSS protection implemented
+- Input validation
+- Secure password storage (bcrypt)
+- JWT authentication
+- Protected routing
+- Special character sanitization
 
-## テクニカルスタック 🛠
+## Technical Stack 🛠
 
-- フロントエンド:
+- Frontend:
   - React + TypeScript
   - Tailwind CSS
   - Shadcn UI
-  - Wouter (ルーティング)
-  - SWR (状態管理)
-- バックエンド:
+  - Wouter (routing)
+  - SWR (state management)
+- Backend:
   - Express.js
   - Node.js
-- データベース:
+- Database:
   - SQLite
 - ORM: 
   - Drizzle
-- 開発ツール:
+- Development Tools:
   - Vite
   - TypeScript
   - ESLint
 
-## 開発環境 💻
+## Development Environment 💻
 
-推奨される開発環境：
-- Node.js 20.x以上
-- npm 9.x以上
+Recommended environment:
+- Node.js 20.x or higher
+- npm 9.x or higher
 
-## ライセンス 📄
+## License 📄
 
-MITライセンスの下で公開されています。詳細は[LICENSE](LICENSE)ファイルを参照してください。
+Released under the MIT License. See [LICENSE](LICENSE) for details.

@@ -39,14 +39,6 @@ author = "agent"
 task = "workflow.run"
 args = "Full Stack App"
 
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "Documentation Check"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "DB Push"
-
 [[workflows.workflow]]
 name = "Full Stack App"
 author = "agent"
@@ -59,33 +51,4 @@ task = "packager.installForAll"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "NODE_ENV=development npm run dev"
-waitForPort = 5000
-
-[[workflows.workflow]]
-name = "Documentation Check"
-author = "agent"
-
-[workflows.workflow.metadata]
-agentRequireRestartOnSave = false
-
-[[workflows.workflow.tasks]]
-task = "packager.installForAll"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "diff README.md README.ja.md || echo 'Files are identical'"
-
-[[workflows.workflow]]
-name = "DB Push"
-author = "agent"
-
-[workflows.workflow.metadata]
-agentRequireRestartOnSave = false
-
-[[workflows.workflow.tasks]]
-task = "packager.installForAll"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "npm run db:push"
+args = "npm run dev"

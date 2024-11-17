@@ -1,19 +1,18 @@
-import { sql } from "drizzle-orm";
-import { text, integer, sqliteTable } from "drizzle-orm/sqlite-core";
+import { pgTable, text, integer, timestamp, jsonb, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const users = sqliteTable("users", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+export const users = pgTable("users", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
-  isAdmin: integer("is_admin", { mode: "boolean" }).default(false),
-  createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at").default(sql`CURRENT_TIMESTAMP`),
+  isAdmin: boolean("is_admin").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-export const prompts = sqliteTable("prompts", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+export const prompts = pgTable("prompts", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   title: text("title").notNull(),
   content: text("content").notNull(),
   tags: text("tags", { mode: "json" }).$type<string[]>(),

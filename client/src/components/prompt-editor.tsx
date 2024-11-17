@@ -70,6 +70,11 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt, isEditable = 
   const [isFormatting, setIsFormatting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
+  // Convert SQLite integer boolean to JavaScript boolean
+  const convertToBoolean = (value: number | null | undefined): boolean => {
+    return value === 1;
+  };
+
   const form = useForm<FormValues>({
     resolver: zodResolver(insertPromptSchema),
     defaultValues: prompt ? {
@@ -77,9 +82,9 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt, isEditable = 
       content: prompt.content,
       tags: Array.isArray(prompt.tags) ? prompt.tags as string[] : [],
       metadata: (prompt.metadata as Record<string, string>) || {},
-      isLiked: prompt.isLiked || false,
-      isNsfw: prompt.isNsfw || false,
-      isPrivate: prompt.isPrivate || false,
+      isLiked: convertToBoolean(prompt.isLiked),
+      isNsfw: convertToBoolean(prompt.isNsfw),
+      isPrivate: convertToBoolean(prompt.isPrivate),
     } : defaultValues,
     disabled: !isEditable
   });
@@ -94,15 +99,16 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt, isEditable = 
           ...acc,
           [desanitizeForDisplay(key)]: typeof value === 'string' ? desanitizeForDisplay(value) : String(value)
         }), {}),
-        isLiked: prompt.isLiked || false,
-        isNsfw: prompt.isNsfw || false,
-        isPrivate: prompt.isPrivate || false,
+        isLiked: convertToBoolean(prompt.isLiked),
+        isNsfw: convertToBoolean(prompt.isNsfw),
+        isPrivate: convertToBoolean(prompt.isPrivate),
       });
     } else {
       form.reset(defaultValues);
     }
   }, [prompt, form]);
 
+  // Rest of the component remains the same...
   const tags = form.watch("tags") || [];
   const metadata = form.watch("metadata") || {};
 
@@ -185,7 +191,13 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt, isEditable = 
       setIsSubmitting(true);
       console.log('Submitting sanitized form values:', values);
 
-      const sanitizedValues = sanitizeObject(values);
+      const sanitizedValues = {
+        ...sanitizeObject(values),
+        // Convert boolean to integer for SQLite
+        isLiked: values.isLiked ? 1 : 0,
+        isNsfw: values.isNsfw ? 1 : 0,
+        isPrivate: values.isPrivate ? 1 : 0,
+      };
 
       if (prompt) {
         const updateData = {

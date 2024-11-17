@@ -1,11 +1,11 @@
-import { defineConfig } from "drizzle-kit";
+import type { Config } from "drizzle-kit";
 import { join } from "path";
 
-export default defineConfig({
-  out: "./migrations",
+export default {
   schema: "./db/schema.ts",
-  driver: "better-sqlite",
+  out: "./migrations",
+  driver: "better-sqlite3",
   dbCredentials: {
     url: join(process.cwd(), "sqlite.db")
-  },
-});
+  }
+} satisfies Config;

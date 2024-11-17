@@ -8,53 +8,42 @@ import { spawn } from "child_process";
 import fetch from "node-fetch";
 import { users } from "../db/schema";
 import { join } from "path";
+import { existsSync, mkdirSync } from 'fs';
+import logger, { requestLogger, errorLogger } from './utils/logger';
+
+// Create logs directory if it doesn't exist
+const logsDir = join(process.cwd(), 'logs');
+if (!existsSync(logsDir)) {
+  mkdirSync(logsDir, { recursive: true });
+}
 
 const app = express();
 
 // Initialize start time for timing logs
 const startTime = Date.now();
 
-function logTimestamp(message: string) {
-  const elapsed = Date.now() - startTime;
-  console.log(`[${new Date().toISOString()}] (${elapsed}ms) ${message}`);
-}
-
 // Basic middleware setup
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 
+// Add request logging middleware
+app.use(requestLogger);
+
 // Add request timeout middleware
 const REQUEST_TIMEOUT = 30000; // 30 seconds
 app.use((req: Request, res: Response, next: NextFunction) => {
   res.setTimeout(REQUEST_TIMEOUT, () => {
+    logger.warn('Request timeout', {
+      method: req.method,
+      url: req.url,
+      timeout: REQUEST_TIMEOUT
+    });
     res.status(408).json({
       error: "Request timeout",
       timestamp: new Date().toISOString()
     });
   });
-  next();
-});
-
-// Request logging middleware with error handling
-app.use((req: Request, res: Response, next: NextFunction) => {
-  const start = Date.now();
-  res.on('finish', () => {
-    const duration = Date.now() - start;
-    logTimestamp(`${req.method} ${req.path} - ${res.statusCode} (${duration}ms)`);
-  });
-  
-  // Handle response errors
-  res.on('error', (error) => {
-    console.error('Response error:', error);
-    if (!res.headersSent) {
-      res.status(500).json({
-        error: "Internal server error",
-        timestamp: new Date().toISOString()
-      });
-    }
-  });
-  
   next();
 });
 
@@ -76,7 +65,7 @@ interface HealthCheckResponse {
 
 // Run database migrations with improved error handling
 async function runMigrations(): Promise<void> {
-  logTimestamp("Starting database migrations...");
+  logger.info("Starting database migrations...");
   
   return new Promise((resolve, reject) => {
     const migrationProcess = spawn('tsx', ['scripts/migrate.ts'], {
@@ -92,7 +81,7 @@ async function runMigrations(): Promise<void> {
     migrationProcess.on('close', (code) => {
       clearTimeout(migrationTimeout);
       if (code === 0) {
-        logTimestamp("Database migrations completed successfully");
+        logger.info("Database migrations completed successfully");
         resolve();
       } else {
         reject(new Error(`Migration failed with exit code ${code}`));
@@ -101,6 +90,7 @@ async function runMigrations(): Promise<void> {
 
     migrationProcess.on('error', (error) => {
       clearTimeout(migrationTimeout);
+      logger.error("Migration process error", { error });
       reject(new Error(`Failed to start migration process: ${error.message}`));
     });
   });
@@ -119,9 +109,10 @@ app.get('/health', async (_req: Request, res: Response) => {
       timestamp: new Date().toISOString()
     };
     
+    logger.info("Health check successful", response);
     res.json(response);
   } catch (error) {
-    console.error('Health check failed:', error);
+    logger.error("Health check failed", { error });
     const response: HealthCheckResponse = {
       status: 'unhealthy',
       uptime: process.uptime(),
@@ -145,20 +136,19 @@ async function checkPortAvailable(port: number): Promise<boolean> {
         try {
           testServer.close();
         } catch (error) {
-          console.error('Error closing test server:', error);
+          logger.error("Error closing test server", { error });
         }
         resolve(false);
       }
     };
 
-    // Set timeout for port check
     const timeoutId = setTimeout(cleanup, 3000);
 
     testServer.once('error', (error: NodeJS.ErrnoException) => {
       if (error.code === 'EADDRINUSE') {
-        console.error(`Port ${port} is already in use`);
+        logger.error(`Port ${port} is already in use`);
       } else {
-        console.error(`Error checking port ${port}:`, error.message);
+        logger.error(`Error checking port ${port}`, { error });
       }
       clearTimeout(timeoutId);
       cleanup();
@@ -179,37 +169,35 @@ async function checkPortAvailable(port: number): Promise<boolean> {
 async function startServer() {
   let server: ReturnType<typeof createServer>;
   let isShuttingDown = false;
-  let shutdownTimeout: NodeJS.Timeout;
   
   const cleanup = async () => {
     if (isShuttingDown) return;
     isShuttingDown = true;
     
-    console.log('Starting cleanup process...');
-    clearTimeout(shutdownTimeout);
+    logger.info('Starting cleanup process...');
     
     return new Promise<void>((resolve) => {
       server?.close(() => {
-        console.log('Server closed successfully');
+        logger.info('Server closed successfully');
         resolve();
       });
       
       // Force close after 10 seconds
       setTimeout(() => {
-        console.log('Force closing server after timeout');
+        logger.warn('Force closing server after timeout');
         resolve();
       }, 10000);
     });
   };
   
   try {
-    logTimestamp("Starting server initialization...");
+    logger.info("Starting server initialization...");
 
     // Run migrations first
     await runMigrations();
 
     // Initialize database connection
-    logTimestamp("Initializing database connection...");
+    logger.info("Initializing database connection...");
     const db = await getDb();
     if (!db) {
       throw new AppError(500, "Database initialization failed");
@@ -217,17 +205,17 @@ async function startServer() {
 
     // Test database connection
     await db.select().from(users).limit(1);
-    logTimestamp("Database connection verified");
+    logger.info("Database connection verified");
 
     const PORT = parseInt(process.env.PORT || "5000", 10);
 
     // Check port availability
-    logTimestamp(`Checking port ${PORT} availability...`);
+    logger.info(`Checking port ${PORT} availability...`);
     const isPortAvailable = await checkPortAvailable(PORT);
     if (!isPortAvailable) {
       throw new AppError(500, `Port ${PORT} is not available`);
     }
-    logTimestamp(`Port ${PORT} is available`);
+    logger.info(`Port ${PORT} is available`);
 
     // Create HTTP server with proper error handling
     server = createServer(app);
@@ -235,16 +223,13 @@ async function startServer() {
     // Register routes and middleware
     registerRoutes(app);
 
+    // Add error logging middleware
+    app.use(errorLogger);
+
     // Error handling middleware
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
       const status = err.statusCode || 500;
       const message = err.message || "Internal Server Error";
-      
-      console.error("Server error:", {
-        status,
-        message,
-        stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
-      });
 
       if (!res.headersSent) {
         res.status(status).json({
@@ -259,13 +244,13 @@ async function startServer() {
     if (process.env.NODE_ENV !== "production") {
       try {
         await setupVite(app, server);
-        logTimestamp("Vite development server initialized");
+        logger.info("Vite development server initialized");
       } catch (error) {
         throw new AppError(500, "Failed to initialize Vite server", error);
       }
     } else {
       serveStatic(app);
-      logTimestamp("Static file serving configured");
+      logger.info("Static file serving configured");
     }
 
     // Graceful shutdown handlers
@@ -274,13 +259,13 @@ async function startServer() {
     
     // Handle uncaught errors
     process.on('uncaughtException', async (error) => {
-      console.error('Uncaught exception:', error);
+      logger.error('Uncaught exception', { error });
       await cleanup();
       process.exit(1);
     });
 
     process.on('unhandledRejection', async (error) => {
-      console.error('Unhandled rejection:', error);
+      logger.error('Unhandled rejection', { error });
       await cleanup();
       process.exit(1);
     });
@@ -298,6 +283,7 @@ async function startServer() {
 
       server.once('error', async (error) => {
         clearTimeout(startupTimeout);
+        logger.error("Server startup error", { error });
         await cleanup();
         reject(new AppError(500, "Server startup failed", error));
       });
@@ -306,7 +292,7 @@ async function startServer() {
         try {
           serverStarted = true;
           clearTimeout(startupTimeout);
-          logTimestamp(`Server started on port ${PORT}`);
+          logger.info(`Server started on port ${PORT}`);
 
           // Verify server is responding with retries
           let retries = 3;
@@ -316,7 +302,7 @@ async function startServer() {
               const data = await response.json() as HealthCheckResponse;
               
               if (data.status === 'healthy') {
-                logTimestamp("Server health check passed");
+                logger.info("Server health check passed");
                 resolve(server);
                 return;
               }
@@ -326,6 +312,7 @@ async function startServer() {
               if (retries === 0) {
                 throw error;
               }
+              logger.warn(`Health check failed, retrying... (${retries} attempts left)`, { error });
               await new Promise(resolve => setTimeout(resolve, 1000));
             }
           }
@@ -337,14 +324,14 @@ async function startServer() {
     });
   } catch (error) {
     await cleanup();
-    console.error("Server initialization failed:", error);
+    logger.error("Server initialization failed", { error });
     throw error;
   }
 }
 
 // Start server with improved error handling
-logTimestamp("Starting server...");
+logger.info("Starting server...");
 startServer().catch(async (error) => {
-  console.error("Fatal server error:", error);
+  logger.error("Fatal server error", { error });
   process.exit(1);
 });

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertPromptSchema, type Prompt } from "db/schema";
-import { Button } from "@/components/ui/button";
+import { Button } from "../components/ui/button";
 import {
   Form,
   FormControl,
@@ -11,13 +11,13 @@ import {
   FormLabel,
   FormMessage,
   FormDescription,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
+} from "../components/ui/form";
+import { Input } from "../components/ui/input";
+import { Textarea } from "../components/ui/textarea";
+import { useToast } from "../hooks/use-toast";
 import { usePrompts } from "../hooks/use-prompts";
-import { Badge } from "@/components/ui/badge";
-import { X, Plus, Loader2, Wand2, Copy, Heart, ShieldAlert, AlertCircle } from "lucide-react";
+import { Badge } from "../components/ui/badge";
+import { X, Plus, Loader2, Wand2, Copy, Heart, ShieldAlert, AlertCircle, Lock } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -25,30 +25,44 @@ import {
   CardHeader,
   CardTitle,
   CardDescription,
-} from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { Alert } from "@/components/ui/alert";
-import { sanitizeObject, desanitizeForDisplay } from "@/lib/security";
+} from "../components/ui/card";
+import { Switch } from "../components/ui/switch";
+import { Label } from "../components/ui/label";
+import { Alert } from "../components/ui/alert";
+import { sanitizeObject, desanitizeForDisplay } from "../lib/security";
+import { useAuth } from "../hooks/use-auth";
 
 interface PromptEditorProps {
   prompt: Prompt | null;
   onClose: () => void;
   setSelectedPrompt: (prompt: Prompt | null) => void;
+  isEditable?: boolean;
 }
 
-const defaultValues = {
+interface FormValues {
+  title: string;
+  content: string;
+  tags: string[];
+  metadata: Record<string, string>;
+  isLiked: boolean;
+  isNsfw: boolean;
+  isPrivate: boolean;
+}
+
+const defaultValues: FormValues = {
   title: "",
   content: "",
-  tags: [] as string[],
-  metadata: {} as Record<string, string>,
+  tags: [],
+  metadata: {},
   isLiked: false,
   isNsfw: false,
+  isPrivate: false,
 };
 
-export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEditorProps) {
-  const { createPrompt, updatePrompt, deletePrompt } = usePrompts();
+export function PromptEditor({ prompt, onClose, setSelectedPrompt, isEditable = true }: PromptEditorProps) {
+  const { createPrompt, updatePrompt, deletePrompt, refreshPrompts } = usePrompts();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [newTag, setNewTag] = useState("");
   const [newMetadataKey, setNewMetadataKey] = useState("");
@@ -56,24 +70,33 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
   const [isFormatting, setIsFormatting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  const form = useForm({
+  const form = useForm<FormValues>({
     resolver: zodResolver(insertPromptSchema),
-    defaultValues: prompt || defaultValues,
+    defaultValues: prompt ? {
+      title: prompt.title,
+      content: prompt.content,
+      tags: Array.isArray(prompt.tags) ? prompt.tags as string[] : [],
+      metadata: (prompt.metadata as Record<string, string>) || {},
+      isLiked: prompt.isLiked || false,
+      isNsfw: prompt.isNsfw || false,
+      isPrivate: prompt.isPrivate || false,
+    } : defaultValues,
+    disabled: !isEditable
   });
 
   useEffect(() => {
     if (prompt) {
-      // Desanitize values when displaying in the form
       form.reset({
         title: desanitizeForDisplay(prompt.title),
         content: desanitizeForDisplay(prompt.content),
-        tags: Array.isArray(prompt.tags) ? prompt.tags.map(desanitizeForDisplay) : [],
-        metadata: Object.entries(prompt.metadata || {}).reduce((acc, [key, value]) => ({
+        tags: Array.isArray(prompt.tags) ? (prompt.tags as string[]).map(desanitizeForDisplay) : [],
+        metadata: Object.entries(prompt.metadata || {}).reduce<Record<string, string>>((acc, [key, value]) => ({
           ...acc,
-          [desanitizeForDisplay(key)]: typeof value === 'string' ? desanitizeForDisplay(value) : value
+          [desanitizeForDisplay(key)]: typeof value === 'string' ? desanitizeForDisplay(value) : String(value)
         }), {}),
         isLiked: prompt.isLiked || false,
         isNsfw: prompt.isNsfw || false,
+        isPrivate: prompt.isPrivate || false,
       });
     } else {
       form.reset(defaultValues);
@@ -83,7 +106,8 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
   const tags = form.watch("tags") || [];
   const metadata = form.watch("metadata") || {};
 
-  const handleAddTag = useCallback((e: React.KeyboardEvent) => {
+  const handleAddTag = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!isEditable) return;
     if (e.key === "Enter" && newTag.trim()) {
       e.preventDefault();
       const sanitizedTag = sanitizeObject({ tag: newTag.trim() }).tag;
@@ -93,17 +117,19 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
       }
       setNewTag("");
     }
-  }, [newTag, form]);
+  }, [newTag, form, isEditable]);
 
   const handleRemoveTag = useCallback((tagToRemove: string) => {
+    if (!isEditable) return;
     const currentTags = form.getValues("tags") || [];
     form.setValue(
       "tags",
       currentTags.filter((tag) => tag !== tagToRemove)
     );
-  }, [form]);
+  }, [form, isEditable]);
 
   const handleAddMetadata = useCallback(() => {
+    if (!isEditable) return;
     if (newMetadataKey.trim() && newMetadataValue.trim()) {
       const sanitized = sanitizeObject({
         key: newMetadataKey.trim(),
@@ -117,30 +143,32 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
       setNewMetadataKey("");
       setNewMetadataValue("");
     }
-  }, [newMetadataKey, newMetadataValue, form]);
+  }, [newMetadataKey, newMetadataValue, form, isEditable]);
 
   const handleRemoveMetadata = useCallback((key: string) => {
+    if (!isEditable) return;
     const currentMetadata = form.getValues("metadata") || {};
     const { [key]: _, ...rest } = currentMetadata;
     form.setValue("metadata", rest);
-  }, [form]);
+  }, [form, isEditable]);
 
   const handleFormatContent = useCallback(() => {
+    if (!isEditable) return;
     setIsFormatting(true);
     const content = form.getValues("content");
     const formatted = content
       .replace(/,(?!\s)/g, ", ")
       .replace(/_/g, " ");
-    
+
     form.setValue("content", formatted);
-    
+
     toast({
       title: "Content formatted",
       description: "Applied formatting rules to the content.",
     });
-    
+
     setIsFormatting(false);
-  }, [form, toast]);
+  }, [form, toast, isEditable]);
 
   const handleCopyContent = useCallback(async () => {
     const content = form.getValues("content");
@@ -151,14 +179,14 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
     });
   }, [form, toast]);
 
-  const onSubmit = async (values: any) => {
+  const onSubmit = async (values: FormValues) => {
+    if (!isEditable) return;
     try {
       setIsSubmitting(true);
       console.log('Submitting sanitized form values:', values);
-      
-      // Sanitize all input values
+
       const sanitizedValues = sanitizeObject(values);
-      
+
       if (prompt) {
         const updateData = {
           ...sanitizedValues,
@@ -168,7 +196,11 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
         console.log('Updating prompt:', updateData);
         const updatedPrompt = await updatePrompt(prompt.id, updateData);
         console.log('Update successful:', updatedPrompt);
-        toast({ 
+
+        // Refresh all prompts after successful update
+        await refreshPrompts();
+
+        toast({
           title: "Prompt updated successfully",
           variant: "default"
         });
@@ -177,7 +209,11 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
         console.log('Creating new prompt');
         const newPrompt = await createPrompt(sanitizedValues);
         console.log('Creation successful:', newPrompt);
-        toast({ 
+
+        // Refresh all prompts after successful creation
+        await refreshPrompts();
+
+        toast({
           title: "Prompt created successfully",
           variant: "default"
         });
@@ -200,15 +236,20 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
   });
 
   const handleDelete = async () => {
+    if (!isEditable) return;
     if (!prompt || !showDeleteConfirm) {
       setShowDeleteConfirm(true);
       return;
     }
-    
+
     try {
       setIsSubmitting(true);
       await deletePrompt(prompt.id);
-      toast({ 
+
+      // Refresh all prompts after successful deletion
+      await refreshPrompts();
+
+      toast({
         title: "Prompt deleted successfully",
         variant: "default"
       });
@@ -225,12 +266,14 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
     }
   };
 
+  // Rest of the component remains the same...
   return (
     <Card className="w-full">
       <CardHeader>
         <CardTitle>{prompt ? "Edit Prompt" : "Create New Prompt"}</CardTitle>
         <CardDescription>
           {prompt ? "Update the existing prompt" : "Create a new prompt with the form below"}
+          {!isEditable && " (Read-only mode)"}
         </CardDescription>
       </CardHeader>
       <Form {...form}>
@@ -243,7 +286,7 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
                 <FormItem>
                   <FormLabel>Title</FormLabel>
                   <FormControl>
-                    <Input {...field} maxLength={100} />
+                    <Input {...field} maxLength={100} disabled={!isEditable} />
                   </FormControl>
                   <FormDescription>
                     Enter a descriptive title for your prompt
@@ -261,29 +304,31 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
                   <FormLabel>Content</FormLabel>
                   <div className="flex gap-2">
                     <FormControl className="flex-1">
-                      <Textarea {...field} className="min-h-[200px]" maxLength={2000} />
+                      <Textarea {...field} className="min-h-[200px]" maxLength={2000} disabled={!isEditable} />
                     </FormControl>
-                    <div className="flex flex-col gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        onClick={handleFormatContent}
-                        disabled={isFormatting}
-                        className="self-start"
-                      >
-                        <Wand2 className={`h-4 w-4 ${isFormatting ? 'animate-spin' : ''}`} />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        onClick={handleCopyContent}
-                        className="self-start"
-                      >
-                        <Copy className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    {isEditable && (
+                      <div className="flex flex-col gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={handleFormatContent}
+                          disabled={isFormatting}
+                          className="self-start"
+                        >
+                          <Wand2 className={`h-4 w-4 ${isFormatting ? 'animate-spin' : ''}`} />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={handleCopyContent}
+                          className="self-start"
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
                   <FormDescription>
                     Write your prompt content here. Use the format button to clean up the text.
@@ -300,9 +345,10 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
                 render={({ field }) => (
                   <div className="flex items-center space-x-2">
                     <Switch
-                      checked={field.value || false}
+                      checked={field.value}
                       onCheckedChange={field.onChange}
                       id="isLiked"
+                      disabled={!isEditable}
                     />
                     <Label htmlFor="isLiked" className="flex items-center gap-2">
                       <Heart className="h-4 w-4" />
@@ -318,13 +364,33 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
                 render={({ field }) => (
                   <div className="flex items-center space-x-2">
                     <Switch
-                      checked={field.value || false}
+                      checked={field.value}
                       onCheckedChange={field.onChange}
                       id="isNsfw"
+                      disabled={!isEditable}
                     />
                     <Label htmlFor="isNsfw" className="flex items-center gap-2">
                       <ShieldAlert className="h-4 w-4" />
                       NSFW
+                    </Label>
+                  </div>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="isPrivate"
+                render={({ field }) => (
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      id="isPrivate"
+                      disabled={!isEditable}
+                    />
+                    <Label htmlFor="isPrivate" className="flex items-center gap-2">
+                      <Lock className="h-4 w-4" />
+                      Private
                     </Label>
                   </div>
                 )}
@@ -337,24 +403,28 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
                 {tags.map((tag: string) => (
                   <Badge key={tag} variant="secondary">
                     {tag}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-4 w-4 p-0 ml-2"
-                      onClick={() => handleRemoveTag(tag)}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
+                    {isEditable && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-4 w-4 p-0 ml-2"
+                        onClick={() => handleRemoveTag(tag)}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    )}
                   </Badge>
                 ))}
               </div>
-              <Input
-                placeholder="Add tag and press Enter..."
-                value={newTag}
-                onChange={(e) => setNewTag(e.target.value)}
-                onKeyDown={handleAddTag}
-                maxLength={50}
-              />
+              {isEditable && (
+                <Input
+                  placeholder="Add tag and press Enter..."
+                  value={newTag}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewTag(e.target.value)}
+                  onKeyDown={handleAddTag}
+                  maxLength={50}
+                />
+              )}
               <FormDescription>
                 Press Enter to add a new tag. Tags help organize your prompts.
               </FormDescription>
@@ -369,38 +439,42 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
                     className="flex items-center gap-2 p-2 rounded-md border"
                   >
                     <span className="font-medium">{key}:</span>
-                    <span>{value as string}</span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="ml-auto"
-                      onClick={() => handleRemoveMetadata(key)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
+                    <span>{value}</span>
+                    {isEditable && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="ml-auto"
+                        onClick={() => handleRemoveMetadata(key)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 ))}
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Key"
-                    value={newMetadataKey}
-                    onChange={(e) => setNewMetadataKey(e.target.value)}
-                    maxLength={50}
-                  />
-                  <Input
-                    placeholder="Value"
-                    value={newMetadataValue}
-                    onChange={(e) => setNewMetadataValue(e.target.value)}
-                    maxLength={100}
-                  />
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={handleAddMetadata}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
+                {isEditable && (
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Key"
+                      value={newMetadataKey}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewMetadataKey(e.target.value)}
+                      maxLength={50}
+                    />
+                    <Input
+                      placeholder="Value"
+                      value={newMetadataValue}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewMetadataValue(e.target.value)}
+                      maxLength={100}
+                    />
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={handleAddMetadata}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
                 <FormDescription>
                   Add custom metadata as key-value pairs to provide additional information.
                 </FormDescription>
@@ -416,7 +490,7 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
           </CardContent>
 
           <CardFooter className="flex justify-end gap-2">
-            {prompt && (
+            {prompt && isEditable && (
               <Button
                 type="button"
                 variant="destructive"
@@ -432,15 +506,17 @@ export function PromptEditor({ prompt, onClose, setSelectedPrompt }: PromptEdito
                 )}
               </Button>
             )}
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : prompt ? (
-                "Update"
-              ) : (
-                "Create"
-              )}
-            </Button>
+            {isEditable && (
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : prompt ? (
+                  "Update"
+                ) : (
+                  "Create"
+                )}
+              </Button>
+            )}
           </CardFooter>
         </form>
       </Form>

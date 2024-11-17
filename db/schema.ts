@@ -20,6 +20,7 @@ export const prompts = sqliteTable("prompts", {
   metadata: text("metadata", { mode: "json" }).$type<Record<string, string>>(),
   isLiked: integer("is_liked", { mode: "boolean" }).default(false),
   isNsfw: integer("is_nsfw", { mode: "boolean" }).default(false),
+  isPrivate: integer("is_private", { mode: "boolean" }).default(false),
   createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text("updated_at").default(sql`CURRENT_TIMESTAMP`),
   userId: integer("user_id").references(() => users.id),

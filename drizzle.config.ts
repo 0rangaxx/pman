@@ -4,8 +4,8 @@ import { join } from "path";
 export default defineConfig({
   out: "./migrations",
   schema: "./db/schema.ts",
-  driver: "better-sqlite",
+  dialect: "sqlite",
   dbCredentials: {
-    url: join(process.cwd(), "sqlite.db")
+    url: `file:${join(process.cwd(), "sqlite.db")}`
   },
 });

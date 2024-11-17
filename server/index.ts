@@ -10,6 +10,7 @@ import { users } from "../db/schema";
 import { join } from "path";
 import { existsSync, mkdirSync } from 'fs';
 import logger, { requestLogger, errorLogger } from './utils/logger';
+import { validateEnv, getValidatedEnv } from './utils/env-validator';
 
 // Create logs directory if it doesn't exist
 const logsDir = join(process.cwd(), 'logs');
@@ -61,6 +62,7 @@ interface HealthCheckResponse {
   database: 'connected' | 'disconnected';
   timestamp: string;
   error?: string;
+  environment?: string;
 }
 
 // Run database migrations with improved error handling
@@ -96,9 +98,10 @@ async function runMigrations(): Promise<void> {
   });
 }
 
-// Enhanced health check endpoint with database verification
+// Enhanced health check endpoint with database and environment verification
 app.get('/health', async (_req: Request, res: Response) => {
   try {
+    const env = getValidatedEnv();
     const db = await getDb();
     await db.select().from(users).limit(1);
     
@@ -106,6 +109,7 @@ app.get('/health', async (_req: Request, res: Response) => {
       status: 'healthy',
       uptime: process.uptime(),
       database: 'connected',
+      environment: env.NODE_ENV,
       timestamp: new Date().toISOString()
     };
     
@@ -123,48 +127,6 @@ app.get('/health', async (_req: Request, res: Response) => {
     res.status(503).json(response);
   }
 });
-
-// Check port availability with timeout
-async function checkPortAvailable(port: number): Promise<boolean> {
-  return new Promise((resolve) => {
-    const testServer = createServer();
-    let resolved = false;
-
-    const cleanup = () => {
-      if (!resolved) {
-        resolved = true;
-        try {
-          testServer.close();
-        } catch (error) {
-          logger.error("Error closing test server", { error });
-        }
-        resolve(false);
-      }
-    };
-
-    const timeoutId = setTimeout(cleanup, 3000);
-
-    testServer.once('error', (error: NodeJS.ErrnoException) => {
-      if (error.code === 'EADDRINUSE') {
-        logger.error(`Port ${port} is already in use`);
-      } else {
-        logger.error(`Error checking port ${port}`, { error });
-      }
-      clearTimeout(timeoutId);
-      cleanup();
-    });
-
-    testServer.once('listening', () => {
-      clearTimeout(timeoutId);
-      if (!resolved) {
-        resolved = true;
-        testServer.close(() => resolve(true));
-      }
-    });
-
-    testServer.listen(port, '0.0.0.0');
-  });
-}
 
 async function startServer() {
   let server: ReturnType<typeof createServer>;
@@ -193,7 +155,14 @@ async function startServer() {
   try {
     logger.info("Starting server initialization...");
 
-    // Run migrations first
+    // Validate environment variables first
+    const env = validateEnv();
+    logger.info("Environment validation successful", { 
+      nodeEnv: env.NODE_ENV,
+      port: env.PORT 
+    });
+
+    // Run migrations
     await runMigrations();
 
     // Initialize database connection
@@ -207,15 +176,13 @@ async function startServer() {
     await db.select().from(users).limit(1);
     logger.info("Database connection verified");
 
-    const PORT = parseInt(process.env.PORT || "5000", 10);
-
     // Check port availability
-    logger.info(`Checking port ${PORT} availability...`);
-    const isPortAvailable = await checkPortAvailable(PORT);
+    logger.info(`Checking port ${env.PORT} availability...`);
+    const isPortAvailable = await checkPortAvailable(env.PORT);
     if (!isPortAvailable) {
-      throw new AppError(500, `Port ${PORT} is not available`);
+      throw new AppError(500, `Port ${env.PORT} is not available`);
     }
-    logger.info(`Port ${PORT} is available`);
+    logger.info(`Port ${env.PORT} is available`);
 
     // Create HTTP server with proper error handling
     server = createServer(app);
@@ -240,8 +207,8 @@ async function startServer() {
       }
     });
 
-    // Setup Vite or static files
-    if (process.env.NODE_ENV !== "production") {
+    // Setup Vite or static files based on environment
+    if (env.NODE_ENV !== "production") {
       try {
         await setupVite(app, server);
         logger.info("Vite development server initialized");
@@ -288,17 +255,17 @@ async function startServer() {
         reject(new AppError(500, "Server startup failed", error));
       });
 
-      server.listen(PORT, "0.0.0.0", async () => {
+      server.listen(env.PORT, "0.0.0.0", async () => {
         try {
           serverStarted = true;
           clearTimeout(startupTimeout);
-          logger.info(`Server started on port ${PORT}`);
+          logger.info(`Server started on port ${env.PORT}`);
 
           // Verify server is responding with retries
           let retries = 3;
           while (retries > 0) {
             try {
-              const response = await fetch(`http://0.0.0.0:${PORT}/health`);
+              const response = await fetch(`http://0.0.0.0:${env.PORT}/health`);
               const data = await response.json() as HealthCheckResponse;
               
               if (data.status === 'healthy') {
@@ -327,6 +294,48 @@ async function startServer() {
     logger.error("Server initialization failed", { error });
     throw error;
   }
+}
+
+// Check port availability with timeout
+async function checkPortAvailable(port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const testServer = createServer();
+    let resolved = false;
+
+    const cleanup = () => {
+      if (!resolved) {
+        resolved = true;
+        try {
+          testServer.close();
+        } catch (error) {
+          logger.error("Error closing test server", { error });
+        }
+        resolve(false);
+      }
+    };
+
+    const timeoutId = setTimeout(cleanup, 3000);
+
+    testServer.once('error', (error: NodeJS.ErrnoException) => {
+      if (error.code === 'EADDRINUSE') {
+        logger.error(`Port ${port} is already in use`);
+      } else {
+        logger.error(`Error checking port ${port}`, { error });
+      }
+      clearTimeout(timeoutId);
+      cleanup();
+    });
+
+    testServer.once('listening', () => {
+      clearTimeout(timeoutId);
+      if (!resolved) {
+        resolved = true;
+        testServer.close(() => resolve(true));
+      }
+    });
+
+    testServer.listen(port, '0.0.0.0');
+  });
 }
 
 // Start server with improved error handling

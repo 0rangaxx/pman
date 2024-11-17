@@ -1,26 +1,27 @@
-import { pgTable, text, integer, timestamp, jsonb, boolean } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { text, integer, sqliteTable } from "drizzle-orm/sqlite-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const users = pgTable("users", {
-  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+export const users = sqliteTable("users", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
-  isAdmin: boolean("is_admin").default(false),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  isAdmin: integer("is_admin", { mode: "boolean" }).default(false),
+  createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").default(sql`CURRENT_TIMESTAMP`),
 });
 
-export const prompts = pgTable("prompts", {
-  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+export const prompts = sqliteTable("prompts", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   title: text("title").notNull(),
   content: text("content").notNull(),
-  tags: text("tags").array(),
-  metadata: jsonb("metadata"),
-  isLiked: boolean("is_liked").default(false),
-  isNsfw: boolean("is_nsfw").default(false),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  tags: text("tags", { mode: "json" }).$type<string[]>(),
+  metadata: text("metadata", { mode: "json" }).$type<Record<string, string>>(),
+  isLiked: integer("is_liked", { mode: "boolean" }).default(false),
+  isNsfw: integer("is_nsfw", { mode: "boolean" }).default(false),
+  createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").default(sql`CURRENT_TIMESTAMP`),
   userId: integer("user_id").references(() => users.id),
 });
 

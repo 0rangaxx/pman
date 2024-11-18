@@ -16,7 +16,7 @@ import { desanitizeForDisplay, sanitizeInput } from "../lib/security";
 import { useAuth } from "../hooks/use-auth";
 
 export function PromptPanel() {
-  const { prompts, isLoading, refreshPrompts } = usePrompts();
+  const { prompts, isLoading, isRefreshing, refreshPrompts } = usePrompts();
   const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
   const [searchCriteria, setSearchCriteria] = useState<SearchCriteria>({
     query: "",
@@ -31,6 +31,7 @@ export function PromptPanel() {
   const [showPrivateOnly, setShowPrivateOnly] = useState(false);
   const { user } = useAuth();
 
+  // Memoized available tags with refresh trigger
   const availableTags = useMemo(() => {
     const tagSet = new Set<string>();
     prompts?.forEach((prompt) => {
@@ -44,8 +45,11 @@ export function PromptPanel() {
     return Array.from(tagSet).sort();
   }, [prompts]);
 
+  // Memoized filtered prompts with refresh dependency
   const filteredPrompts = useMemo(() => {
-    return prompts?.filter((prompt) => {
+    if (!prompts) return [];
+
+    return prompts.filter((prompt) => {
       if (showLikedOnly && !prompt.isLiked) return false;
       if (showNsfwOnly && !prompt.isNsfw) return false;
       if (showPrivateOnly && !prompt.isPrivate) return false;
@@ -117,10 +121,11 @@ export function PromptPanel() {
     setIsCreating(true);
   }, []);
 
-  const handleCloseEditor = useCallback(() => {
+  const handleCloseEditor = useCallback(async () => {
     setSelectedPrompt(null);
     setIsCreating(false);
-    refreshPrompts();
+    // Ensure fresh data after editor is closed
+    await refreshPrompts();
   }, [refreshPrompts]);
 
   const handleTagClick = useCallback((tag: string) => {
@@ -132,10 +137,12 @@ export function PromptPanel() {
     }));
   }, []);
 
-  const handlePromptSelect = useCallback((prompt: Prompt) => {
+  const handlePromptSelect = useCallback(async (prompt: Prompt) => {
+    // Refresh data before showing the prompt to ensure we have the latest version
+    await refreshPrompts();
     setSelectedPrompt(prompt);
     setIsCreating(false);
-  }, []);
+  }, [refreshPrompts]);
 
   const handleLikedChange = useCallback((checked: boolean) => {
     setShowLikedOnly(checked);
@@ -149,6 +156,11 @@ export function PromptPanel() {
     setShowPrivateOnly(checked);
   }, []);
 
+  // Generate a unique key for the ScrollArea that changes when relevant states change
+  const scrollAreaKey = useMemo(() => {
+    return `prompts-${prompts?.length}-${showLikedOnly}-${showNsfwOnly}-${showPrivateOnly}-${searchCriteria.query}-${isRefreshing}-${Date.now()}`;
+  }, [prompts?.length, showLikedOnly, showNsfwOnly, showPrivateOnly, searchCriteria.query, isRefreshing]);
+
   return (
     <div className="h-full">
       <PanelGroup direction="horizontal">
@@ -161,7 +173,11 @@ export function PromptPanel() {
                   onCriteriaChange={setSearchCriteria}
                   availableTags={availableTags}
                 />
-                <Button onClick={handleCreateNew} size="icon">
+                <Button 
+                  onClick={handleCreateNew} 
+                  size="icon"
+                  disabled={isRefreshing}
+                >
                   <Plus className="h-4 w-4" />
                 </Button>
               </div>
@@ -172,6 +188,7 @@ export function PromptPanel() {
                     id="liked"
                     checked={showLikedOnly}
                     onCheckedChange={handleLikedChange}
+                    disabled={isRefreshing}
                   />
                   <Label htmlFor="liked" className="flex items-center gap-2">
                     <Heart className="h-4 w-4" />
@@ -184,6 +201,7 @@ export function PromptPanel() {
                     id="nsfw"
                     checked={showNsfwOnly}
                     onCheckedChange={handleNsfwChange}
+                    disabled={isRefreshing}
                   />
                   <Label htmlFor="nsfw" className="flex items-center gap-2">
                     <ShieldAlert className="h-4 w-4" />
@@ -196,6 +214,7 @@ export function PromptPanel() {
                     id="private"
                     checked={showPrivateOnly}
                     onCheckedChange={handlePrivateChange}
+                    disabled={isRefreshing}
                   />
                   <Label htmlFor="private" className="flex items-center gap-2">
                     <Lock className="h-4 w-4" />
@@ -206,8 +225,8 @@ export function PromptPanel() {
             </div>
 
             <ScrollArea
-              className="flex-1 mt-4"
-              key={`${prompts?.length}-${showLikedOnly}-${showNsfwOnly}-${showPrivateOnly}-${searchCriteria.query}`}
+              className="flex-1 mt-4 relative"
+              key={scrollAreaKey}
             >
               {isLoading ? (
                 <div className="flex items-center justify-center p-4">
@@ -218,49 +237,62 @@ export function PromptPanel() {
                   No prompts found
                 </div>
               ) : (
-                filteredPrompts?.map((prompt) => {
-                  const tags = Array.isArray(prompt.tags) ? prompt.tags : [];
-                  const isEditable = user && prompt.userId === user.id;
-                  return (
-                    <div key={prompt.id} className="mb-2">
-                      <Button
-                        variant={selectedPrompt?.id === prompt.id ? "default" : "ghost"}
-                        className="w-full justify-start flex-col items-start p-4 h-auto"
-                        onClick={() => handlePromptSelect(prompt)}
-                      >
-                        <div className="font-medium flex items-center gap-2">
-                          {desanitizeForDisplay(prompt.title)}
-                          {prompt.isLiked && <Heart className="h-4 w-4 text-red-500" />}
-                          {prompt.isNsfw && <ShieldAlert className="h-4 w-4 text-yellow-500" />}
-                          {prompt.isPrivate && <Lock className="h-4 w-4 text-blue-500" />}
-                          {!isEditable && <Lock className="h-4 w-4 text-gray-500" />}
-                        </div>
-                        <div className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                          {desanitizeForDisplay(prompt.content)}
-                        </div>
-                        {tags.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {tags.filter((tag) => typeof tag === 'string').map((tag) => (
-                              <Badge
-                                key={tag}
-                                variant={searchCriteria.selectedTags.includes(tag) ? "default" : "secondary"}
-                                className={cn(
-                                  "text-xs cursor-pointer",
-                                  searchCriteria.selectedTags.includes(tag)
-                                    ? "hover:bg-primary/80"
-                                    : "hover:bg-secondary/80"
-                                )}
-                                onClick={() => handleTagClick(tag)}
-                              >
-                                {desanitizeForDisplay(tag)}
-                              </Badge>
-                            ))}
-                          </div>
-                        )}
-                      </Button>
+                <>
+                  {isRefreshing && (
+                    <div className="absolute top-0 left-0 right-0 flex justify-center p-2 bg-background/80 backdrop-blur z-10">
+                      <Loader2 className="h-4 w-4 animate-spin" />
                     </div>
-                  );
-                })
+                  )}
+                  <div className={cn("space-y-2", isRefreshing && "opacity-50 pointer-events-none")}>
+                    {filteredPrompts?.map((prompt) => {
+                      const tags = Array.isArray(prompt.tags) ? prompt.tags : [];
+                      const isEditable = user && prompt.userId === user.id;
+                      return (
+                        <div key={`${prompt.id}-${prompt.updatedAt}`}>
+                          <Button
+                            variant={selectedPrompt?.id === prompt.id ? "default" : "ghost"}
+                            className="w-full justify-start flex-col items-start p-4 h-auto"
+                            onClick={() => handlePromptSelect(prompt)}
+                            disabled={isRefreshing}
+                          >
+                            <div className="font-medium flex items-center gap-2">
+                              {desanitizeForDisplay(prompt.title)}
+                              {prompt.isLiked && <Heart className="h-4 w-4 text-red-500" />}
+                              {prompt.isNsfw && <ShieldAlert className="h-4 w-4 text-yellow-500" />}
+                              {prompt.isPrivate && <Lock className="h-4 w-4 text-blue-500" />}
+                              {!isEditable && <Lock className="h-4 w-4 text-gray-500" />}
+                            </div>
+                            <div className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                              {desanitizeForDisplay(prompt.content)}
+                            </div>
+                            {tags.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {tags.filter((tag) => typeof tag === 'string').map((tag) => (
+                                  <Badge
+                                    key={tag}
+                                    variant={searchCriteria.selectedTags.includes(tag) ? "default" : "secondary"}
+                                    className={cn(
+                                      "text-xs cursor-pointer",
+                                      searchCriteria.selectedTags.includes(tag)
+                                        ? "hover:bg-primary/80"
+                                        : "hover:bg-secondary/80"
+                                    )}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleTagClick(tag);
+                                    }}
+                                  >
+                                    {desanitizeForDisplay(tag)}
+                                  </Badge>
+                                ))}
+                              </div>
+                            )}
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
               )}
             </ScrollArea>
           </div>
@@ -276,6 +308,7 @@ export function PromptPanel() {
                 prompt={selectedPrompt}
                 onClose={handleCloseEditor}
                 setSelectedPrompt={setSelectedPrompt}
+                isEditable={selectedPrompt ? (user && selectedPrompt.userId === user.id) : true}
               />
             )}
           </div>

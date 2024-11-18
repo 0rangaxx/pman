@@ -6,10 +6,11 @@ export function usePrompts() {
   const [isLoading, setIsLoading] = useState(true);
   const [isError, setIsError] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const fetchPrompts = useCallback(async () => {
     try {
-      setIsLoading(true);
+      setIsRefreshing(true);
       setIsError(false);
       setError(null);
 
@@ -29,6 +30,7 @@ export function usePrompts() {
       setError(error instanceof Error ? error.message : 'Failed to fetch prompts');
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   }, []);
 
@@ -39,6 +41,7 @@ export function usePrompts() {
 
   const createPrompt = useCallback(async (prompt: Omit<Prompt, "id" | "createdAt" | "updatedAt" | "userId">) => {
     try {
+      setIsRefreshing(true);
       const response = await fetch('/api/prompts', {
         method: 'POST',
         credentials: 'include',
@@ -47,7 +50,7 @@ export function usePrompts() {
         },
         body: JSON.stringify({
           ...prompt,
-          isPrivate: prompt.isPrivate ?? false, // デフォルトは公開
+          isPrivate: prompt.isPrivate ?? false,
         }),
       });
 
@@ -56,16 +59,25 @@ export function usePrompts() {
       }
 
       const newPrompt = await response.json();
+      
+      // Update local state immediately for optimistic updates
       setPrompts(currentPrompts => [...currentPrompts, newPrompt]);
+      
+      // Refresh to ensure consistency
+      await fetchPrompts();
+      
       return newPrompt;
     } catch (error) {
       console.error('Error creating prompt:', error);
       throw error;
+    } finally {
+      setIsRefreshing(false);
     }
-  }, []);
+  }, [fetchPrompts]);
 
   const updatePrompt = useCallback(async (id: number, promptUpdate: Partial<Prompt>) => {
     try {
+      setIsRefreshing(true);
       const response = await fetch(`/api/prompts/${id}`, {
         method: 'PUT',
         credentials: 'include',
@@ -81,7 +93,7 @@ export function usePrompts() {
 
       const updatedPrompt = await response.json();
 
-      // Completely replace the prompt in the list
+      // Update local state immediately for optimistic updates
       setPrompts(currentPrompts => {
         const index = currentPrompts.findIndex(p => p.id === id);
         if (index === -1) return currentPrompts;
@@ -91,15 +103,21 @@ export function usePrompts() {
         return newPrompts;
       });
 
+      // Refresh to ensure consistency
+      await fetchPrompts();
+
       return updatedPrompt;
     } catch (error) {
       console.error('Error updating prompt:', error);
       throw error;
+    } finally {
+      setIsRefreshing(false);
     }
-  }, []);
+  }, [fetchPrompts]);
 
   const deletePrompt = useCallback(async (id: number) => {
     try {
+      setIsRefreshing(true);
       const response = await fetch(`/api/prompts/${id}`, {
         method: 'DELETE',
         credentials: 'include',
@@ -109,20 +127,27 @@ export function usePrompts() {
         throw new Error('Failed to delete prompt');
       }
 
+      // Update local state immediately for optimistic updates
       setPrompts(currentPrompts =>
         currentPrompts.filter(prompt => prompt.id !== id)
       );
+
+      // Refresh to ensure consistency
+      await fetchPrompts();
     } catch (error) {
       console.error('Error deleting prompt:', error);
       throw error;
+    } finally {
+      setIsRefreshing(false);
     }
-  }, []);
+  }, [fetchPrompts]);
 
   return {
     prompts,
     isLoading,
     isError,
     error,
+    isRefreshing,
     createPrompt,
     updatePrompt,
     deletePrompt,

@@ -1,0 +1,7 @@
+2024-11-17T11:58:29.774Z [error] Server initialization failed {"error":{"details":[{"path":"JWT_SECRET","message":"Required"}],"name":"EnvironmentError"}}
+2024-11-17T12:00:32.974Z [error] Server initialization failed {"error":{}}
+2024-11-17T12:00:52.314Z [error] Server initialization failed {"error":{}}
+2024-11-17T12:01:41.016Z [error] Environment validation failed {"errors":[{"path":"JWT_SECRET","message":"JWT_SECRET must be at least 32 characters long"}]}
+2024-11-17T12:01:51.023Z [error] Server initialization failed {"error":{"details":[{"path":"JWT_SECRET","message":"JWT_SECRET must be at least 32 characters long"}],"name":"EnvironmentError"}}
+2024-11-17T12:04:31.153Z [error] Environment validation failed {"errors":[{"path":"JWT_SECRET","message":"JWT_SECRET must be at least 32 characters long"}]}
+2024-11-17T12:04:41.157Z [error] Server initialization failed {"error":{"details":[{"path":"JWT_SECRET","message":"JWT_SECRET must be at least 32 characters long"}],"name":"EnvironmentError"}}

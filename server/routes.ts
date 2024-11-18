@@ -34,10 +34,8 @@ export function registerRoutes(app: Express) {
   // Prompt routes
   app.get("/api/prompts", authenticateToken, async (req, res) => {
     try {
-      // Get all prompts that are either:
-      // 1. Owned by the current user (regardless of private status)
-      // 2. Public prompts (isPrivate = false) from other users
-      const promptsList = await db
+      const dbInstance = await db.getInstance();
+      const promptsList = await dbInstance
         .select()
         .from(prompts)
         .where(
@@ -58,15 +56,16 @@ export function registerRoutes(app: Express) {
 
   app.post("/api/prompts", authenticateToken, async (req, res) => {
     try {
+      const dbInstance = await db.getInstance();
       const { title, content, tags, metadata, isLiked, isNsfw, isPrivate } = req.body;
-      const [prompt] = await db.insert(prompts).values({
+      const [prompt] = await dbInstance.insert(prompts).values({
         title,
         content,
         tags,
         metadata,
         isLiked,
         isNsfw,
-        isPrivate: isPrivate ?? false, // デフォルトはfalse（公開）
+        isPrivate: isPrivate ?? false,
         userId: req.user!.id,
       }).returning();
       res.json(prompt);
@@ -78,11 +77,12 @@ export function registerRoutes(app: Express) {
 
   app.put("/api/prompts/:id", authenticateToken, async (req, res) => {
     try {
+      const dbInstance = await db.getInstance();
       const promptId = parseInt(req.params.id);
       const { title, content, tags, metadata, isLiked, isNsfw, isPrivate } = req.body;
 
       // Verify ownership
-      const [existingPrompt] = await db.select()
+      const [existingPrompt] = await dbInstance.select()
         .from(prompts)
         .where(eq(prompts.id, promptId));
 
@@ -94,7 +94,7 @@ export function registerRoutes(app: Express) {
         return res.status(403).json({ error: "Not authorized to update this prompt" });
       }
 
-      const [updatedPrompt] = await db.update(prompts)
+      const [updatedPrompt] = await dbInstance.update(prompts)
         .set({
           title,
           content,
@@ -117,10 +117,11 @@ export function registerRoutes(app: Express) {
 
   app.delete("/api/prompts/:id", authenticateToken, async (req, res) => {
     try {
+      const dbInstance = await db.getInstance();
       const promptId = parseInt(req.params.id);
 
       // Verify ownership
-      const [existingPrompt] = await db.select()
+      const [existingPrompt] = await dbInstance.select()
         .from(prompts)
         .where(eq(prompts.id, promptId));
 
@@ -132,7 +133,7 @@ export function registerRoutes(app: Express) {
         return res.status(403).json({ error: "Not authorized to delete this prompt" });
       }
 
-      await db.delete(prompts).where(eq(prompts.id, promptId));
+      await dbInstance.delete(prompts).where(eq(prompts.id, promptId));
       res.json({ message: "Prompt deleted successfully" });
     } catch (error) {
       console.error('Error deleting prompt:', error);
@@ -147,17 +148,18 @@ export function registerRoutes(app: Express) {
         return res.status(403).json({ error: "Admin access required" });
       }
 
+      const dbInstance = await db.getInstance();
       const userId = parseInt(req.params.id);
       if (userId === req.user.id) {
         return res.status(400).json({ error: "Cannot modify your own admin status" });
       }
 
-      const [user] = await db.select().from(users).where(eq(users.id, userId));
+      const [user] = await dbInstance.select().from(users).where(eq(users.id, userId));
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
 
-      const [updatedUser] = await db
+      const [updatedUser] = await dbInstance
         .update(users)
         .set({
           isAdmin: !user.isAdmin,
@@ -182,17 +184,18 @@ export function registerRoutes(app: Express) {
         return res.status(403).json({ error: "Admin access required" });
       }
 
+      const dbInstance = await db.getInstance();
       const userId = parseInt(req.params.id);
       if (userId === req.user.id) {
         return res.status(400).json({ error: "Cannot delete your own account" });
       }
 
-      const [user] = await db.select().from(users).where(eq(users.id, userId));
+      const [user] = await dbInstance.select().from(users).where(eq(users.id, userId));
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
 
-      await db.delete(users).where(eq(users.id, userId));
+      await dbInstance.delete(users).where(eq(users.id, userId));
 
       res.json({ message: "User deleted successfully" });
     } catch (error) {
@@ -203,19 +206,20 @@ export function registerRoutes(app: Express) {
 
   app.post("/api/register", async (req, res) => {
     try {
+      const dbInstance = await db.getInstance();
       const { username, password } = req.body;
       console.log('Registering user:', username);
 
-      const existingUser = await db.select().from(users).where(eq(users.username, username));
+      const existingUser = await dbInstance.select().from(users).where(eq(users.username, username));
       if (existingUser.length > 0) {
         return res.status(400).json({ error: "Username already exists" });
       }
 
       const hashedPassword = await bcrypt.hash(password, 10);
-      const [user] = await db.insert(users).values({
+      const [user] = await dbInstance.insert(users).values({
         username,
         password: hashedPassword,
-        isAdmin: false, // Default to false for new users
+        isAdmin: false,
       }).returning();
 
       console.log('User registered successfully:', user.id);
@@ -228,9 +232,10 @@ export function registerRoutes(app: Express) {
 
   app.post("/api/login", async (req, res) => {
     try {
+      const dbInstance = await db.getInstance();
       const { username, password } = req.body;
 
-      const [user] = await db.select().from(users).where(eq(users.username, username));
+      const [user] = await dbInstance.select().from(users).where(eq(users.username, username));
       if (!user) {
         return res.status(401).json({ error: "Invalid username or password" });
       }
@@ -276,7 +281,8 @@ export function registerRoutes(app: Express) {
     }
 
     try {
-      const usersList = await db.select({
+      const dbInstance = await db.getInstance();
+      const usersList = await dbInstance.select({
         id: users.id,
         username: users.username,
         isAdmin: users.isAdmin,
@@ -291,6 +297,7 @@ export function registerRoutes(app: Express) {
 
   app.put("/api/user/settings", authenticateToken, async (req, res) => {
     try {
+      const dbInstance = await db.getInstance();
       const { username, currentPassword, newPassword } = req.body;
       const userId = req.user?.id;
 
@@ -299,7 +306,7 @@ export function registerRoutes(app: Express) {
       }
 
       // Get current user
-      const [user] = await db.select().from(users).where(eq(users.id, userId));
+      const [user] = await dbInstance.select().from(users).where(eq(users.id, userId));
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
@@ -312,7 +319,7 @@ export function registerRoutes(app: Express) {
 
       // Check if new username is taken (if username is being changed)
       if (username !== user.username) {
-        const existingUser = await db.select().from(users).where(eq(users.username, username));
+        const existingUser = await dbInstance.select().from(users).where(eq(users.username, username));
         if (existingUser.length > 0) {
           return res.status(400).json({ error: "Username already exists" });
         }
@@ -322,7 +329,7 @@ export function registerRoutes(app: Express) {
       const hashedPassword = newPassword ? await bcrypt.hash(newPassword, 10) : user.password;
 
       // Update user
-      const [updatedUser] = await db
+      const [updatedUser] = await dbInstance
         .update(users)
         .set({
           username,

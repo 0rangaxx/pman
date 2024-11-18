@@ -93,6 +93,218 @@ A dual-panel prompt management system with comprehensive user authentication and
 └── logs/                # Application logs
 ```
 
+## API Documentation
+
+### Authentication
+
+#### Register User
+- **POST** `/api/register`
+- **Description**: Create a new user account
+- **Request Body**:
+  ```json
+  {
+    "username": "string",
+    "password": "string"
+  }
+  ```
+- **Response**: 
+  ```json
+  {
+    "user": {
+      "id": "number",
+      "username": "string",
+      "isAdmin": "boolean"
+    }
+  }
+  ```
+
+#### Login
+- **POST** `/api/login`
+- **Description**: Authenticate user and receive JWT token
+- **Request Body**:
+  ```json
+  {
+    "username": "string",
+    "password": "string"
+  }
+  ```
+- **Response**:
+  ```json
+  {
+    "user": {
+      "id": "number",
+      "username": "string",
+      "isAdmin": "boolean"
+    },
+    "token": "string"
+  }
+  ```
+- **Note**: Token is also set as an HTTP-only cookie
+
+#### Logout
+- **POST** `/api/logout`
+- **Description**: Clear authentication token
+- **Response**:
+  ```json
+  {
+    "message": "Logged out successfully"
+  }
+  ```
+
+### Prompts
+
+#### Get Prompts
+- **GET** `/api/prompts`
+- **Auth**: Required
+- **Description**: Retrieve all accessible prompts (user's own and public prompts)
+- **Response**: Array of prompt objects
+  ```json
+  [
+    {
+      "id": "number",
+      "title": "string",
+      "content": "string",
+      "tags": "string[]",
+      "metadata": "object",
+      "isLiked": "boolean",
+      "isNsfw": "boolean",
+      "isPrivate": "boolean",
+      "createdAt": "string",
+      "updatedAt": "string",
+      "userId": "number"
+    }
+  ]
+  ```
+
+#### Create Prompt
+- **POST** `/api/prompts`
+- **Auth**: Required
+- **Request Body**:
+  ```json
+  {
+    "title": "string",
+    "content": "string",
+    "tags": "string[]",
+    "metadata": "object",
+    "isLiked": "boolean",
+    "isNsfw": "boolean",
+    "isPrivate": "boolean"
+  }
+  ```
+- **Response**: Created prompt object
+
+#### Update Prompt
+- **PUT** `/api/prompts/:id`
+- **Auth**: Required
+- **Description**: Update an existing prompt
+- **Request Body**: Same as Create Prompt
+- **Response**: Updated prompt object
+
+#### Delete Prompt
+- **DELETE** `/api/prompts/:id`
+- **Auth**: Required
+- **Response**:
+  ```json
+  {
+    "message": "Prompt deleted successfully"
+  }
+  ```
+
+### User Management
+
+#### Get Current User
+- **GET** `/api/user`
+- **Auth**: Required
+- **Response**: Current user object
+
+#### Update User Settings
+- **PUT** `/api/user/settings`
+- **Auth**: Required
+- **Request Body**:
+  ```json
+  {
+    "username": "string",
+    "currentPassword": "string",
+    "newPassword": "string"
+  }
+  ```
+- **Response**: Updated user object
+
+#### List Users (Admin Only)
+- **GET** `/api/users`
+- **Auth**: Required (Admin)
+- **Response**: Array of user objects
+
+#### Toggle Admin Status (Admin Only)
+- **PUT** `/api/users/:id/toggle-admin`
+- **Auth**: Required (Admin)
+- **Response**:
+  ```json
+  {
+    "message": "Admin status granted/revoked successfully",
+    "user": "UserObject"
+  }
+  ```
+
+#### Delete User (Admin Only)
+- **DELETE** `/api/users/:id`
+- **Auth**: Required (Admin)
+- **Response**:
+  ```json
+  {
+    "message": "User deleted successfully"
+  }
+  ```
+
+### System
+
+#### Health Check
+- **GET** `/api/health`
+- **Description**: Check system health status
+- **Response**:
+  ```json
+  {
+    "status": "healthy",
+    "uptime": "number",
+    "database": "connected",
+    "environment": "string",
+    "timestamp": "string"
+  }
+  ```
+
+### Error Responses
+
+All endpoints may return the following error responses:
+
+- **401 Unauthorized**:
+  ```json
+  {
+    "error": "Authentication required"
+  }
+  ```
+
+- **403 Forbidden**:
+  ```json
+  {
+    "error": "Not authorized to perform this action"
+  }
+  ```
+
+- **404 Not Found**:
+  ```json
+  {
+    "error": "Resource not found"
+  }
+  ```
+
+- **500 Internal Server Error**:
+  ```json
+  {
+    "error": "Internal server error message",
+    "timestamp": "ISO date string"
+  }
+  ```
+
 ## Technical Stack
 
 ### Frontend

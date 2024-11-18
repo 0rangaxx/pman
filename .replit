@@ -87,6 +87,38 @@ args = "Documentation Review Status"
 task = "workflow.run"
 args = "Final Verification"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "API Documentation Status"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Step Complete Notification"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "API Documentation Verification"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "API Documentation Final Verification"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Final API Documentation Review"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "API Documentation Status Check"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "API Documentation Complete"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "API Documentation Verification Request"
+
 [[workflows.workflow]]
 name = "Dev Server"
 author = "agent"
@@ -198,7 +230,7 @@ task = "packager.installForAll"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "echo 'README.md has been fully updated with comprehensive documentation. Please confirm if the documentation is complete and accurate before moving to the next step (Add API documentation section).'"
+args = "echo 'API documentation section has been added to README.md. Please review the documentation for accuracy and completeness.'"
 
 [[workflows.workflow]]
 name = "Verification Request"
@@ -308,3 +340,222 @@ echo 'The README.md documentation has been fully updated with comprehensive cove
 - Error handling and logging
 
 Please confirm if the documentation is complete and accurate, so we can proceed with adding the API documentation section.'"""
+
+[[workflows.workflow]]
+name = "API Documentation Status"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = """
+echo 'I have completed adding the API documentation section to README.md. The documentation now includes:
+1. All API endpoints organized by functionality (Authentication, Prompts, User Management, System)
+2. Detailed request/response formats with JSON examples
+3. Authentication requirements for each endpoint
+4. Common error responses and status codes
+5. Clear descriptions for each endpoint
+
+Please review and confirm if the API documentation is complete and accurate.'"""
+
+[[workflows.workflow]]
+name = "Step Complete Notification"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = """
+echo 'Current step \"Add API documentation section\" has been completed. The API documentation now includes:
+1. All API endpoints organized by functionality (Authentication, Prompts, User Management, System)
+2. Detailed request/response formats with JSON examples
+3. Authentication requirements for each endpoint
+4. Common error responses with status codes
+5. Clear descriptions for each endpoint
+
+Please review and confirm if the API documentation is complete and accurate.'"""
+
+[[workflows.workflow]]
+name = "API Documentation Verification"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = """
+echo 'I have completed adding the API documentation section to README.md. Please verify if:
+1. All API endpoints from server/routes.ts are documented correctly
+2. The request/response formats match the actual implementation
+3. Authentication requirements are clearly specified
+4. Error responses are documented accurately
+5. All endpoints have clear descriptions
+
+Please review and confirm if any changes or additions are needed.'"""
+
+[[workflows.workflow]]
+name = "API Documentation Final Verification"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = """
+echo 'I have completed adding the API documentation section to README.md. The documentation now includes:
+
+1. API Endpoints by Category:
+   - Authentication (register, login, logout)
+   - Prompts (CRUD operations)
+   - User Management (settings, admin operations)
+   - System (health check)
+
+2. For each endpoint:
+   - HTTP method and path
+   - Authentication requirements
+   - Request/response formats with JSON examples
+   - Error responses
+
+Please review and confirm if the API documentation is complete and accurate before proceeding to the next step.'"""
+
+[[workflows.workflow]]
+name = "Final API Documentation Review"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = """
+echo 'I have completed the API documentation section and verified that all endpoints from server/routes.ts are documented correctly. Please verify:
+
+1. Authentication:
+   - Register (/api/register)
+   - Login (/api/login)
+   - Logout (/api/logout)
+
+2. Prompts:
+   - List prompts (GET /api/prompts)
+   - Create prompt (POST /api/prompts)
+   - Update prompt (PUT /api/prompts/:id)
+   - Delete prompt (DELETE /api/prompts/:id)
+
+3. User Management:
+   - Get current user (GET /api/user)
+   - Update settings (PUT /api/user/settings)
+   - List users (GET /api/users) [Admin]
+   - Toggle admin (PUT /api/users/:id/toggle-admin) [Admin]
+   - Delete user (DELETE /api/users/:id) [Admin]
+
+4. System:
+   - Health check (GET /api/health)
+
+Please confirm if the API documentation is complete and accurate.'"""
+
+[[workflows.workflow]]
+name = "API Documentation Status Check"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = """
+echo 'I have completed adding the API documentation section to README.md. Please verify:
+
+1. Documentation Coverage:
+   - All endpoints from server/routes.ts are documented
+   - All request/response formats match implementation
+   - Authentication requirements are specified
+   - Error responses are documented
+   - All endpoints have clear descriptions
+
+2. Documentation Organization:
+   - Authentication endpoints (register, login, logout)
+   - Prompts endpoints (CRUD operations)
+   - User Management endpoints (settings, admin operations)
+   - System endpoints (health check)
+
+Please confirm if the API documentation is complete and accurate, or if any changes are needed.'"""
+
+[[workflows.workflow]]
+name = "API Documentation Complete"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = """
+echo 'I have completed the current step \"Add API documentation section\". The documentation now includes:
+
+1. Complete API Documentation:
+   - Authentication endpoints (register, login, logout)
+   - Prompts endpoints (CRUD operations)
+   - User Management endpoints (settings, admin operations)
+   - System endpoints (health check)
+   - Detailed request/response formats
+   - Authentication requirements
+   - Error responses
+
+All endpoints from server/routes.ts have been documented with accurate request/response formats and authentication requirements.
+
+Please confirm if the API documentation is complete and accurate so we can proceed to the next step.'"""
+
+[[workflows.workflow]]
+name = "API Documentation Verification Request"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = """
+echo 'I have completed adding the API documentation section to README.md. Please verify:
+
+1. Authentication Endpoints (/api/register, /api/login, /api/logout)
+2. Prompts CRUD Operations (GET/POST/PUT/DELETE /api/prompts)
+3. User Management (GET/PUT /api/user, /api/users)
+4. System Health Check (GET /api/health)
+
+The documentation includes for each endpoint:
+- Complete request/response formats with JSON examples
+- Authentication requirements
+- Error responses and status codes
+- Clear descriptions and usage notes
+
+Please confirm if the API documentation is complete and accurate or if any changes/additions are needed.'"""
